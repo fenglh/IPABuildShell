@@ -1,7 +1,7 @@
 # IPABuildShell
 iOS脚本配置Xcode Project（打包）
 
-
+```
 bluemoon007deiMac:~ itx$ /Users/itx/Desktop/build.sh -h
   -p <Xcode Project File>: 指定Xcode project.
   -f <Profile>: 指定授权文件.
@@ -14,5 +14,6 @@ bluemoon007deiMac:~ itx$ /Users/itx/Desktop/build.sh -h
   -s: 显示有效的签名.
   -h: 帮助.
   -v: 输出详细信息.
+```
 
-  详见博客：http://blog.csdn.net/chsadin/article/details/61192923
+  详见博客：[iOS脚本配置Xcode Project（打包）](http://blog.csdn.net/chsadin/article/details/61192923 "iOS脚本配置Xcode Project（打包）")
