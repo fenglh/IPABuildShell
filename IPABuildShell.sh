@@ -169,11 +169,15 @@ function getSchemes
 	done
 }
 
-function getTargets
+
+
+function getAllTargets
 {
 	rootObject=`$plistBuddy -c "Print :rootObject" $projectFile`
 	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" $projectFile | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
 	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
+	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
+	targets=(${targets[0]})
 	logit "发现targets(id):$targets"
 }
 
@@ -436,11 +440,11 @@ function build
 		fi
 
 		if [[ $isExistXcWorkspace == true ]]; then
-			cmd="$xcodebuild archive -workspace $xcworkspace -scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration   build"
+			$xcodebuild archive -workspace $xcworkspace -scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
 		else
-			cmd="$xcodebuild archive						 -scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration   build"
+			$xcodebuild archive						 	-scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
 		fi
-		$cmd
+		# $cmd
 		if [[ $? -ne 0 ]]; then
 			echo "构建失败！构建命令：$cmd" 
 			rm -rf ${packageDir}/*
@@ -562,23 +566,24 @@ checkForProjectFile
 checkIsExistWorkplace
 checkEnvironmentConfigureFile
 getEnvirionment
-getTargets
+getAllTargets
 getCodeSigningStyle
 getSchemes
 getBuildSettingsConfigure
 setEnvironment
-setManulSigning
-setOnlyActiveArch
+# setManulSigning
+# setOnlyActiveArch
 
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
-	setProfile
+	# setProfile
 fi
 
-if [[ "$newCodeSign" != '' ]]; then
-	setCodeSign
-fi
+# if [[ "$newCodeSign" != '' ]]; then
+# 	setCodeSign
+# fi
 build
 
+##所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
 
 
