@@ -427,9 +427,7 @@ function build
 	else
 		configuration="Release"
 	fi
-	echo "-------------"
-	echo ${buildTargetNames[*]}
-	echo "-------------"
+
 	for (( i = 0; i < ${#buildTargetNames[@]}; i++ )); do
 		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
 		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
