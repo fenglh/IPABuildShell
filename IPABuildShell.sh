@@ -581,7 +581,10 @@ if [[ -f $newProfile ]]; then
 	getNewProfileUuid
 fi
 
-ruby ./xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+
+
+rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
+ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
 
 
 
