@@ -417,7 +417,7 @@ function setCodeSign
 	done
 }
 
-
+#buildTargetNames
 function build
 {
 	packageDir=$xcodeProject/../build/package
@@ -427,9 +427,9 @@ function build
 	else
 		configuration="Release"
 	fi
-	for (( i = 0; i < ${#schemes[@]}; i++ )); do
-		archivePath=${packageDir}/${schemes[$i]}.xcarchive
-		exprotPath=${packageDir}/${schemes[$i]}.ipa
+	for (( i = 0; i < ${buildTargetNames[@]}; i++ )); do
+		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
+		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
 
 		if [[ -d $archivePath ]]; then
 			rm -rf $archivePath
@@ -440,9 +440,9 @@ function build
 		fi
 
 		if [[ $isExistXcWorkspace == true ]]; then
-			$xcodebuild archive -workspace $xcworkspace -scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
+			$xcodebuild archive -workspace $xcworkspace -scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
 		else
-			$xcodebuild archive						 	-scheme ${schemes[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
+			$xcodebuild archive						 	-scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
 		fi
 		# $cmd
 		if [[ $? -ne 0 ]]; then
@@ -568,7 +568,7 @@ checkEnvironmentConfigureFile
 getEnvirionment
 getAllTargets
 getCodeSigningStyle
-getSchemes
+# getSchemes
 getBuildSettingsConfigure
 setEnvironment
 # setManulSigning
