@@ -417,7 +417,7 @@ function setCodeSign
 	done
 }
 
-#buildTargetNames
+
 function build
 {
 	packageDir=$xcodeProject/../build/package
@@ -427,7 +427,10 @@ function build
 	else
 		configuration="Release"
 	fi
-	for (( i = 0; i < ${buildTargetNames[@]}; i++ )); do
+	echo "-------------"
+	echo ${buildTargetNames[*]}
+	echo "-------------"
+	for (( i = 0; i < ${#buildTargetNames[@]}; i++ )); do
 		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
 		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
 
@@ -568,21 +571,20 @@ checkEnvironmentConfigureFile
 getEnvirionment
 getAllTargets
 getCodeSigningStyle
-# getSchemes
 getBuildSettingsConfigure
 setEnvironment
-# setManulSigning
-# setOnlyActiveArch
 
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
-	# setProfile
 fi
 
-# if [[ "$newCodeSign" != '' ]]; then
-# 	setCodeSign
-# fi
+ruby ./xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+
+
+
 build
+
+
 
 ##所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
 
