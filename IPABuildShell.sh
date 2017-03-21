@@ -564,6 +564,9 @@ while getopts p:f:s:xvhgtl option; do
 done
 
 
+#允许访问证书
+security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
+
 
 checkForProjectFile
 checkIsExistWorkplace
