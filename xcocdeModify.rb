@@ -64,6 +64,12 @@ end
 ##ruby /Users/itx/Desktop/脚本打包/xcocdeModify.rb ./SFATest.xcodeproj 866d5a17-5c1d-4373-b4bf-88af22bfe97b dis_NK94TM64KF.cn.com.bluemoon.sfa_20181109_过期 "iPhone Distribution: Blue Moon ( China ) Co., Ltd."  NK94TM64KF
 
 logit($projectPath)
+logit($provisionProfileUuid)
+logit($provisionProfileName)
+logit($codeSignIdentify)
+logit($developmentTeam)
+
+
 setProvisioningStyle(project)
 setSigning(project)
 
