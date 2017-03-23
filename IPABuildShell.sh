@@ -441,9 +441,9 @@ function build
 		fi
 
 		if [[ $isExistXcWorkspace == true ]]; then
-			$xcodebuild archive -workspace $xcworkspace -scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
+			$xcodebuild archive -workspace $xcworkspace -scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build  ONLY_ACTIVE_ARCH=NO
 		else
-			$xcodebuild archive						 	-scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build DEVELOPMENT_TEAM=${newTeamId} CODE_SIGN_IDENTITY="${newCodeSign}" PROVISIONING_PROFILE=${newProfileUuid}
+			$xcodebuild archive						 	-scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build  ONLY_ACTIVE_ARCH=NO
 		fi
 		# $cmd
 		if [[ $? -ne 0 ]]; then
