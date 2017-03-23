@@ -62,7 +62,7 @@ function usage
 function showUsableCodeSign
 {
 	#先输出签名，再将输出的结果空格' '替换成'#',并赋值给数组。（因为数组的分隔符是空格' '）
-	signList=(`echo "123456" | sudo  $security find-identity -p codesigning -v | awk -F '"' '{print $2}' | tr -s '\n' | tr -s ' ' '#'`)
+	signList=(`$security find-identity -p codesigning -v | awk -F '"' '{print $2}' | tr -s '\n' | tr -s ' ' '#'`)
 	for (( i = 0; i < ${#signList[@]}; i++ )); do
 		usableCodeSign=`echo ${signList[$i]} | tr '#' ' '`
 		usableCodeSignList[$i]=$usableCodeSign
@@ -237,9 +237,9 @@ function getBuildSettingsConfigure
 function getNewProfileUuid
 {
 
-	newProfileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$newProfile" )`
-	newProfileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$newProfile" )`
-	newTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$newProfile" )`
+	newProfileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
+	newProfileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
+	newTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
 	if [[ "$newProfileUuid" == '' ]]; then
 		echo "newProfileUuid=$newProfileUuid, 获取参数配置Profile的uuid失败!"
 		exit 1;
@@ -256,18 +256,18 @@ function getNewProfileUuid
 function getProfileType
 {
 	profile=$1
-	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $($security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	##判断是否存在key:ProvisionedDevices
-	haveKey=`echo "123456" | sudo  $security cms -D -i "$profile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
+	haveKey=`$security cms -D -i "$profile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
 	if [[ $? -eq 0 ]]; then
-		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$profile" ) `
+		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" ) `
 		if [[ $getTaskAllow == true ]]; then
 			profileType='debug'
 		else
 			profileType='ad-hoc'
 		fi
 	else
-		provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$profile" ) `
+		provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" ) `
 		if [[ $provisionsAllDevices == true ]]; then
 			profileType='enterprise'
 		else
@@ -487,9 +487,9 @@ function checkIPA
 		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$infoPlistFile"`
 		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $infoPlistFile`
 		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
-		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$mobileProvisionFile" )`
-		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$mobileProvisionFile" )`
-		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $(echo "123456" | sudo  $security cms -D -i "$mobileProvisionFile" )`
+		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
+		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
+		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
 		appCodeSignIdenfifier=`$codesign --display -r- $app | cut -d "\"" -f 4`
 
 
@@ -574,7 +574,7 @@ done
 
 
 #允许访问证书
-echo "123456" | sudo  $security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
+$security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
 
 
 checkForProjectFile
