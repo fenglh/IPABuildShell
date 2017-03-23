@@ -290,7 +290,18 @@ function getProfileType
 
 function setBuildVersion
 {
-	
+
+	for targetId in ${targets[@]}; do
+		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+		logit "配置列表Id：$buildConfigurationListId"
+		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		buildConfigurations=(`echo $buildConfigurationList`)
+		logit "发现配置:$buildConfigurations"
+		for configurationId in ${buildConfigurations[@]}; do
+			infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		done
+	done
+
 	infoPlistFilePath=$xcodeProject/../$infoPlistFile
 	logit "设置${infoPlistFilePath} build 版本号:${gitVersionCount}!"
 
@@ -606,23 +617,17 @@ getEnvirionment
 getAllTargets
 getGitVersionCount
 getCodeSigningStyle
-
-getBuildSettingsConfigure
-
 setEnvironment
-
 setBuildVersion
-
-
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
 fi
-
 configureSigningByRuby
 
+getBuildSettingsConfigure
 
 
-build
+#build
 
 
 
