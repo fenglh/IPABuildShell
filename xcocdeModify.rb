@@ -13,17 +13,22 @@ $developmentTeam = ARGV[4]
 
 project = Xcodeproj::Project.open($projectPath)
 
+def logit(string)
+	puts "	ruby >>#{string}"
+	
+end
+
 def setProvisioningStyle(project)
 	targetUuid=project.root_object.targets[0].uuid
 	##判断字典是否存在ProvisioningStyle
 	haskey=project.root_object.attributes["TargetAttributes"][targetUuid].include?("ProvisioningStyle")
 	if haskey
 		project.root_object.attributes["TargetAttributes"][targetUuid]["ProvisioningStyle"]="Manual"
-		puts "ProvisioningStyle设置为Manual"
+		logit("ProvisioningStyle设置为Manual")
 		provisioningStyle=project.root_object.attributes["TargetAttributes"][targetUuid]["ProvisioningStyle"]
-		puts "#{targetUuid}当前ProvisioningStyle：#{provisioningStyle}"
+		logit("#{targetUuid}当前ProvisioningStyle：#{provisioningStyle}")
 	else
-		puts "key:ProvisioningStyle 不存在"
+		logit("key:ProvisioningStyle 不存在")
 	end
 
 	
@@ -48,6 +53,8 @@ def setSigning(project)
 	end
 	
 end
+
+
 
 ###例如:
 ##ruby /Users/itx/Desktop/脚本打包/xcocdeModify.rb ./SFATest.xcodeproj e4ee21f0-2e88-4c67-af81-fc0a67755266 dev_NK94TM64KF.cn.com.bluemoon.sfa_101_1107 "iPhone Developer: Li Chao (BTTHBUB23E)"  NK94TM64KF
