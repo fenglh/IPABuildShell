@@ -554,11 +554,10 @@ function configureSigningByRuby
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
 
-	cmd="ruby "${rbDir}/xcocdeModify.rb" "$xcodeProject" "$newProfileUuid" "$newProfileName" "$newCodeSign"  "$newTeamId""
-	$cmd
+	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid $newProfileName "$newCodeSign"  $newTeamId
+
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"
-		logit "配置命令:$cmd"
 		exit 1
 	fi
 	
