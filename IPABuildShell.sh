@@ -601,7 +601,7 @@ configureSigningByRuby
 getBuildSettingsConfigure
 
 
-#build
+build
 
 
 
