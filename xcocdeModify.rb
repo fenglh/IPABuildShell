@@ -11,6 +11,9 @@ $provisionProfileName = ARGV[2]
 $codeSignIdentify = ARGV[3]
 $developmentTeam = ARGV[4]
 
+
+logit("工程：$projectPath")
+
 project = Xcodeproj::Project.open($projectPath)
 
 def logit(string)
