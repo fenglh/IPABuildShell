@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
-# -*- coding: UTF-8 -*-
+
+#encoding: utf-8
 
 
 require 'xcodeproj'
@@ -10,7 +11,6 @@ $provisionProfileName = ARGV[2]
 $codeSignIdentify = ARGV[3]
 $developmentTeam = ARGV[4]
 
-puts $projectPath
 project = Xcodeproj::Project.open($projectPath)
 
 def setProvisioningStyle(project)
