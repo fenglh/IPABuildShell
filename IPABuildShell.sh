@@ -35,6 +35,7 @@ plistBuddy="/usr/libexec/PlistBuddy"
 xcodebuild="/usr/bin/xcodebuild"
 security="/usr/bin/security"
 codesign="/usr/bin/codesign"
+ruby="/usr/bin/ruby"
 verbose=false
 productionEnvironment=true
 debugConfiguration=false
@@ -550,7 +551,7 @@ function configureSigningByRuby
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
-	cmd="${rbDir}/xcocdeModify.rb \"$xcodeProject\" \"$newProfileUuid\" \"$newProfileName\" \"$newCodeSign\"  \"$newTeamId\""
+	cmd="$ruby ${rbDir}/xcocdeModify.rb \"$xcodeProject\" \"$newProfileUuid\" \"$newProfileName\" \"$newCodeSign\"  \"$newTeamId\""
 	$cmd
 	logit "ruby 命令：$cmd"
 
