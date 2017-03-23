@@ -198,7 +198,6 @@ function getBuildSettingsConfigure
 		logit "发现配置:$buildConfigurations"
 
 		for configurationId in ${buildConfigurations[@]}; do
-			logit "=============================="
 
 			configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
 			logit "配置类型: $configurationName"
@@ -549,6 +548,10 @@ function configureSigningByRuby
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+	if [[ $? -ne 0 ]]; then
+		echo "xcocdeModify.rb 修改配置失败！！"
+		exit 1
+	fi
 	logit "========================配置完成========================"
 }
 
