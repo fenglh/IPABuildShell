@@ -258,7 +258,7 @@ function getProfileType
 	profile=$1
 	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $($security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	##判断是否存在key:ProvisionedDevices
-	haveKey=`security cms -D -i "$profile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
+	haveKey=`$security cms -D -i "$profile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
 	if [[ $? -eq 0 ]]; then
 		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" ) `
 		if [[ $getTaskAllow == true ]]; then
@@ -574,7 +574,7 @@ done
 
 
 #允许访问证书
-security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
+$security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
 
 
 checkForProjectFile
