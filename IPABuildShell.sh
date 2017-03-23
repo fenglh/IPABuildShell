@@ -551,8 +551,8 @@ function configureSigningByRuby
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
-	cmd="$ruby ${rbDir}/xcocdeModify.rb \"$xcodeProject\" \"$newProfileUuid\" \"$newProfileName\" \"$newCodeSign\"  \"$newTeamId\""
-	$cmd
+	$ruby ${rbDir}/xcocdeModify.rb $xcodeProject $newProfileUuid $newProfileName $newCodeSign  $newTeamId
+
 	logit "ruby 命令：$cmd"
 
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
