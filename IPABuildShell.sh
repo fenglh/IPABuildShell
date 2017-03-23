@@ -551,11 +551,8 @@ function configureSigningByRuby
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
-	$ruby ${rbDir}/xcocdeModify.rb $xcodeProject $newProfileUuid $newProfileName $newCodeSign  $newTeamId
 
-	logit "ruby 命令：$cmd"
-
-	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+	ruby "${rbDir}/xcocdeModify.rb" "$xcodeProject" "$newProfileUuid" "$newProfileName" "$newCodeSign"  "$newTeamId"
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"
 		exit 1
