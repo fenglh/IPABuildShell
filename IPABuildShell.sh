@@ -543,6 +543,11 @@ function renameAndBackup
 	
 }
 
+function configureSigningByRuby
+{
+	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
+ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+}
 
 
 while getopts p:f:s:xvhgtl option; do
@@ -572,18 +577,14 @@ checkEnvironmentConfigureFile
 getEnvirionment
 getAllTargets
 getCodeSigningStyle
-getBuildSettingsConfigure
 setEnvironment
 
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
 fi
 
-
-
-rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
-ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
-
+configureSigningByRuby
+getBuildSettingsConfigure
 
 
 build
