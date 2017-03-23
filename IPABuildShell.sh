@@ -186,6 +186,7 @@ function getAllTargets
 ##获取BuildSetting 配置
 function getBuildSettingsConfigure
 {
+	logit "======================获取配置Signing后的配置信息======================"
 	for targetId in ${targets[@]}; do
 		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
 		buildTargetNames=(${buildTargetNames[*]} $targetName)
@@ -545,8 +546,10 @@ function renameAndBackup
 
 function configureSigningByRuby
 {
+	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
-ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
+	logit "========================配置完成========================"
 }
 
 
