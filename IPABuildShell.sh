@@ -43,6 +43,8 @@ environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 
 
+
+
 function usage
 {
 	echo "  -p <Xcode Project File>: 指定Xcode project."
@@ -547,6 +549,11 @@ function configureSigningByRuby
 {
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
+
+	cmd="${rbDir}/xcocdeModify.rb \"$xcodeProject\" \"$newProfileUuid\" \"$newProfileName\" \"$newCodeSign\"  \"$newTeamId\""
+	$cmd
+	logit "ruby 命令：$cmd"
+
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid "$newProfileName" "$newCodeSign"  "$newTeamId"
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"

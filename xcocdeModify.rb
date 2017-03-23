@@ -56,21 +56,16 @@ end
 
 
 $projectPath = ARGV[0]
-
-logit($projectPath)
-
-project = Xcodeproj::Project.open($projectPath)
-
 $provisionProfileUuid = ARGV[1]
 $provisionProfileName = ARGV[2]
 $codeSignIdentify = ARGV[3]
 $developmentTeam = ARGV[4]
 
 
+project = Xcodeproj::Project.open($projectPath)
 
 
-
-
+logit($projectPath)
 logit($provisionProfileUuid)
 logit($provisionProfileName)
 logit($codeSignIdentify)
