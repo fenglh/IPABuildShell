@@ -158,6 +158,7 @@ function getGitVersionCount
 }
 
 
+
 ##获取scheme
 function getSchemes
 {
@@ -287,11 +288,20 @@ function getProfileType
 	
 }
 
-
-##设置build号
 function setBuildVersion
 {
-	$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" $infoPlistFile
+	
+	infoPlistFilePath=$xcodeProject/../$infoPlistFile
+	logit "设置${infoPlistFilePath} build 版本号:${gitVersionCount}!"
+
+	if [[ -f "$infoPlistFilePath" ]]; then
+		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" $infoPlistFilePath
+	else
+		echo "${infoPlistFilePath}文件不存在，无法修改"
+		exit 1
+	fi
+
+	
 }
 
 
@@ -591,20 +601,28 @@ $security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
 checkForProjectFile
 checkIsExistWorkplace
 checkEnvironmentConfigureFile
+
 getEnvirionment
 getAllTargets
+getGitVersionCount
 getCodeSigningStyle
+
+getBuildSettingsConfigure
+
 setEnvironment
+
+setBuildVersion
+
 
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
 fi
 
 configureSigningByRuby
-getBuildSettingsConfigure
 
 
-build
+
+#build
 
 
 
