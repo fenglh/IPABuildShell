@@ -556,9 +556,10 @@ function configureSigningByRuby
 	$cmd
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"
+		logit "配置命令:$cmd"
 		exit 1
 	fi
-	logit "配置命令:$cmd"
+	
 
 
 	logit "========================配置完成========================"
