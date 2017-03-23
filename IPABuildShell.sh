@@ -29,6 +29,8 @@
 	# --  : 标记后续参数类型
 #--------------------------------------------
 
+##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错
+export LANG=zh_CN.UTF-8
 
 tmpLogFile=/tmp/`date +"%Y%m%d%H%M%S"`.txt
 plistBuddy="/usr/libexec/PlistBuddy"
