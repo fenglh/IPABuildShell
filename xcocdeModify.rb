@@ -1,6 +1,5 @@
-#encoding: utf-8
-#!/usr/bin/ruby
-
+#! /usr/bin/ruby
+# encoding: utf-8
 
 
 require 'xcodeproj'
