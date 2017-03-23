@@ -5,16 +5,7 @@
 
 require 'xcodeproj'
 
-$projectPath = ARGV[0]
-$provisionProfileUuid = ARGV[1]
-$provisionProfileName = ARGV[2]
-$codeSignIdentify = ARGV[3]
-$developmentTeam = ARGV[4]
 
-
-
-
-project = Xcodeproj::Project.open($projectPath)
 
 def logit(string)
 	puts "	ruby >>#{string}"
@@ -63,7 +54,23 @@ end
 ##ruby /Users/itx/Desktop/脚本打包/xcocdeModify.rb ./SFATest.xcodeproj e4ee21f0-2e88-4c67-af81-fc0a67755266 dev_NK94TM64KF.cn.com.bluemoon.sfa_101_1107 "iPhone Developer: Li Chao (BTTHBUB23E)"  NK94TM64KF
 ##ruby /Users/itx/Desktop/脚本打包/xcocdeModify.rb ./SFATest.xcodeproj 866d5a17-5c1d-4373-b4bf-88af22bfe97b dis_NK94TM64KF.cn.com.bluemoon.sfa_20181109_过期 "iPhone Distribution: Blue Moon ( China ) Co., Ltd."  NK94TM64KF
 
+
+$projectPath = ARGV[0]
+
 logit($projectPath)
+
+project = Xcodeproj::Project.open($projectPath)
+
+$provisionProfileUuid = ARGV[1]
+$provisionProfileName = ARGV[2]
+$codeSignIdentify = ARGV[3]
+$developmentTeam = ARGV[4]
+
+
+
+
+
+
 logit($provisionProfileUuid)
 logit($provisionProfileName)
 logit($codeSignIdentify)
