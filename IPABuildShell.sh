@@ -633,8 +633,9 @@ setEnvironment
 setBuildVersion
 if [[ -f $newProfile ]]; then
 	getNewProfileUuid
+	configureSigningByRuby
 fi
-configureSigningByRuby
+
 
 getBuildSettingsConfigure
 
