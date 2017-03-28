@@ -517,7 +517,7 @@ function build
 			logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
 			exit 1
 		fi
-		#repairXcentFile
+		repairXcentFile
 		checkIPA
 		renameAndBackup
 
