@@ -52,6 +52,7 @@ xcodebuild="/usr/bin/xcodebuild"
 security="/usr/bin/security"
 codesign="/usr/bin/codesign"
 ruby="/usr/bin/ruby"
+lipo="/usr/bin/lipo"
 verbose=false
 productionEnvironment=true
 debugConfiguration=false
@@ -59,6 +60,12 @@ declare -a targetNames
 environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 
+##设置命令快捷方式
+# function setAliasShortCut
+# {
+# 	bashProfile=$HOME/.bash_profile
+# 	currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )/`basename "$0"`"
+# }
 
 function usage
 {
@@ -470,6 +477,7 @@ function build
 		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
 		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
 
+
 		if [[ -d $archivePath ]]; then
 			rm -rf $archivePath
 		fi
@@ -498,30 +506,59 @@ function build
 			logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
 			exit 1
 		fi
+		repairXcentFile
 		checkIPA
 		renameAndBackup
 
 	done
 }
 
+##在打企业包的时候：会报 archived-expanded-entitlements.xcent  文件缺失!这是xcode的bug
+##链接：http://stackoverflow.com/questions/28589653/mac-os-x-build-server-missing-archived-expanded-entitlements-xcent-file-in-ipa
+function repairXcentFile
+{
 
+	appName=`basename $exprotPath .ipa`
+	xcentFile=${archivePath}/Products/Applications/${appName}.app/archived-expanded-entitlements.xcent
+	if [[ -f "$xcentFile" ]]; then
+		logit  "拷贝xcent文件：$xcentFile "
+		unzip -o $exprotPath -d /$packageDir >/dev/null 2>&1
+		app=${packageDir}/Payload/${appName}.app
+		cp -af $xcentFile $app
+		##压缩,并覆盖原有的ipa
+		cd ${packageDir}  ##必须cd到此目录 ，否则zip会包含绝对路径
+		zip -qry  $exprotPath Payload && rm -rf Payload
+		cd -
+	else
+		echo "$xcentFile 文件不存在，修复Xcent文件失败!"
+		exit 1
+	fi
+
+}
 
 ##构建完成，检查App
 function checkIPA
 {
 
 	##解压强制覆盖，并不输出日志
+
 	unzip -o $exprotPath -d /tmp/ >/dev/null 2>&1
 	appName=`basename $exprotPath .ipa`
 
 	app=/tmp/Payload/${appName}.app
 
-	logit "============================="
+	codesign --no-strict -v "$app"
+	if [[ $? -ne 0 ]]; then
+		echo "签名检查：签名校验不通过！"
+		exit 1;
+	fi
+	logit ""
+	logit "==============签名检查：签名校验通过！==============="
 	if [[ -d $app ]]; then
 		infoPlistFile=${app}/Info.plist
 		mobileProvisionFile=${app}/embedded.mobileprovision
 
-		appName=`$plistBuddy -c "Print :CFBundleName" $infoPlistFile`
+		appShowingName=`$plistBuddy -c "Print :CFBundleName" $infoPlistFile`
 		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$infoPlistFile"`
 		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $infoPlistFile`
 		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
@@ -529,18 +566,24 @@ function checkIPA
 		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
 		appCodeSignIdenfifier=`$codesign --display -r- $app | cut -d "\"" -f 4`
+		#支持最小的iOS版本
+		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
+		#支持的arch
+		supportArchitectures=`$lipo -info $app/$appName | cut -d ":" -f 3`
 
-
-		logit "名字:$appName"
+		logit "名字:$appShowingName"
 		logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 		logit "bundle identify:$appBundleId"
 		logit "版本:$appVersion"
 		logit "build:$appBuildVersion"
+		logit "支持最低iOS版本:$supportMinimumOSVersion"
+		logit "支持的arch:$supportArchitectures"
 		logit "签名:$appCodeSignIdenfifier"
 		logit "授权文件:${appMobileProvisionName}.mobileprovision"
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
 		getProfileType $mobileProvisionFile
+
 	else
 		echo "解压失败！无法找到$app"
 		exit 1
@@ -598,6 +641,7 @@ function configureSigningByRuby
 
 	logit "========================配置完成========================"
 }
+
 
 
 while getopts p:f:s:xvhgtl option; do
