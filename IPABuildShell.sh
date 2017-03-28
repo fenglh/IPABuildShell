@@ -555,7 +555,9 @@ function checkIPA
 
 	unzip -o $exprotPath -d /tmp/ >/dev/null 2>&1
 	appName=`basename $exprotPath .ipa`
-
+	if [[ -d /tmp/Payload ]]; then
+		rm -rf /tmp/Payload
+	fi
 	app=/tmp/Payload/${appName}.app
 
 	codesign --no-strict -v "$app"
