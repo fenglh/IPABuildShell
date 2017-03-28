@@ -61,18 +61,29 @@ environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 
 ##设置命令快捷方式
-# function setAliasShortCut
-# {
-# 	bashProfile=$HOME/.bash_profile
-# 	currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )/`basename "$0"`"
-# }
+function setAliasShortCut
+{
+	bashProfile=$HOME/.bash_profile
+	if [[ ! -f $bashProfile ]]; then
+		touch $bashProfile
+	fi
+	currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )/`basename "$0"`"
+	aliasString="alias gn=\"$currentShellDir -g\""
+	grep "$aliasString" $bashProfile
+	if [[ $? -ne 0 ]]; then
+		echo $aliasString > $bashProfile
+	fi
+
+}
 
 function usage
 {
+	setAliasShortCut
+
 	echo "  -p <Xcode Project File>: 指定Xcode project."
 	echo "  -f <Profile>: 指定授权文件."
 	echo "  -s <codeSign identify>: 指定签名，使用-l 参数列举可用签名."
-	echo "  -g: 获取git版本数量，并自动更改build号为版本数量号."
+	echo "  -g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source $bashProfile)"
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
 	echo "  -d: 设置debug模式，默认release模式."
@@ -506,7 +517,7 @@ function build
 			logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
 			exit 1
 		fi
-		repairXcentFile
+		#repairXcentFile
 		checkIPA
 		renameAndBackup
 
