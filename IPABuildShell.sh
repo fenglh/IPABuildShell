@@ -553,13 +553,12 @@ function checkIPA
 
 	##解压强制覆盖，并不输出日志
 
-	unzip -o $exprotPath -d /tmp/ >/dev/null 2>&1
-	appName=`basename $exprotPath .ipa`
 	if [[ -d /tmp/Payload ]]; then
 		rm -rf /tmp/Payload
 	fi
+	unzip -o $exprotPath -d /tmp/ >/dev/null 2>&1
+	appName=`basename $exprotPath .ipa`
 	app=/tmp/Payload/${appName}.app
-
 	codesign --no-strict -v "$app"
 	if [[ $? -ne 0 ]]; then
 		echo "签名检查：签名校验不通过！"
