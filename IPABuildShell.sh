@@ -625,7 +625,7 @@ function renameAndBackup
 	fi
 
 	date=`date +"%Y%m%d_%H%M%S"`
-	name=${appName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
+	name=${appShowingName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
 	ipaName=${name}.ipa
 	textLogName=${name}.txt
 	logit "ipa重命名并备份到：$backupDir/$ipaName"
