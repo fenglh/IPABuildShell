@@ -189,24 +189,24 @@ function getGitVersionCount
 
 
 
-##获取scheme
-function getSchemes
-{
-	##获取scheme，替换#号，是为了方便赋值给数组。scheme名字带有空格的时候例如：Copy of BlueMoonSFA，会被误分割成数组的元素。
-	schemeList=(`$xcodebuild -project $xcodeProject -list | awk '/\Schemes/{s=$0~/Schemes/?1:0}s' | grep -v "Schemes:" | tr -s '\n'| tr -s ' ' '#'`)
-	for (( i = 0; i < ${#schemeList[@]}; i++ )); do
-		scheme=`echo ${schemeList[$i]} | tr -d '#'`
-		schemes[$i]=$scheme
-	done
+# ##获取scheme
+# function getSchemes
+# {
+# 	##获取scheme，替换#号，是为了方便赋值给数组。scheme名字带有空格的时候例如：Copy of BlueMoonSFA，会被误分割成数组的元素。
+# 	schemeList=(`$xcodebuild -project $xcodeProject -list | awk '/\Schemes/{s=$0~/Schemes/?1:0}s' | grep -v "Schemes:" | tr -s '\n'| tr -s ' ' '#'`)
+# 	for (( i = 0; i < ${#schemeList[@]}; i++ )); do
+# 		scheme=`echo ${schemeList[$i]} | tr -d '#'`
+# 		schemes[$i]=$scheme
+# 	done
 
-	logit "获取到schemes，数量：${#schemes[@]}"
-	for (( i = 0; i < ${#schemes[@]}; i++ )); do
-		logit "${schemes[$i]}"
-	done
-}
+# 	logit "获取到schemes，数量：${#schemes[@]}"
+# 	for (( i = 0; i < ${#schemes[@]}; i++ )); do
+# 		logit "${schemes[$i]}"
+# 	done
+# }
 
 
-
+##这里只取第一个target
 function getAllTargets
 {
 	rootObject=`$plistBuddy -c "Print :rootObject" $projectFile`
@@ -214,7 +214,12 @@ function getAllTargets
 	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
 	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
 	targets=(${targets[0]})
-	logit "发现targets(id):$targets"
+	for targetId in ${targets[@]}; do
+		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
+		logit "target名字：$targetName"
+		buildTargetNames=(${buildTargetNames[*]} $targetName)
+	done
+
 }
 
 
@@ -224,9 +229,6 @@ function getBuildSettingsConfigure
 {
 	logit "======================获取配置Signing后的配置信息======================"
 	for targetId in ${targets[@]}; do
-		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
-		buildTargetNames=(${buildTargetNames[*]} $targetName)
-		logit "target名字：$targetName"
 		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
 		logit "配置列表Id：$buildConfigurationListId"
 		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -268,6 +270,8 @@ function getBuildSettingsConfigure
 		done
 	done
 }
+
+
 
 
 function getNewProfileUuid
@@ -485,6 +489,7 @@ function build
 	fi
 
 	for (( i = 0; i < ${#buildTargetNames[@]}; i++ )); do
+
 		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
 		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
 
