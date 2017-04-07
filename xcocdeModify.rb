@@ -7,8 +7,7 @@ require 'xcodeproj'
 
 
 def logit(string)
-	puts "	ruby >>#{string}"
-	
+	puts "	ruby>>#{string}"
 end
 
 def setProvisioningStyle(project)

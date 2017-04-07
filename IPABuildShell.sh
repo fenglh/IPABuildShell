@@ -114,6 +114,11 @@ function logit() {
   echo "	>> $@" >> $tmpLogFile
 }
 
+function logitVerbose
+{
+	echo "	>> $@"
+	echo "	>> $@" >> $tmpLogFile
+}
 
 ##检查xcode project
 function checkForProjectFile
@@ -183,7 +188,7 @@ function getEnvirionment
 function getGitVersionCount
 {
 	gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
-	echo "当前版本数量:$gitVersionCount"
+	logit "当前版本数量:$gitVersionCount"
 }
 
 
@@ -224,20 +229,18 @@ function getAllTargets
 
 
 ##获取BuildSetting 配置
-function getBuildSettingsConfigure
+function showBuildSetting
 {
-	logit "======================获取配置Signing后的配置信息======================"
+	logitVerbose "======================当前Build Setting 配置======================"
 	for targetId in ${targets[@]}; do
 		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
-		logit "配置列表Id：$buildConfigurationListId"
+		logitVerbose "配置targetId：$buildConfigurationListId"
 		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		buildConfigurations=(`echo $buildConfigurationList`)
-		logit "发现配置:$buildConfigurations"
-
 		for configurationId in ${buildConfigurations[@]}; do
 
 			configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-			logit "配置类型: $configurationName"
+			logitVerbose "配置类型: $configurationName"
 			# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
 			# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 			# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -254,18 +257,17 @@ function getBuildSettingsConfigure
 
 			# logit "codeSignEntitlements:$codeSignEntitlements"
 			# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
-			logit "codeSignIdentity:$codeSignIdentity"
-			logit "codeSignIdentitySDK:$codeSignIdentitySDK"
-			logit "developmentTeam:$developmentTeam"
-			logit "infoPlistFile:$infoPlistFile"
-			logit "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
-			logit "onlyActiveArch:$onlyActiveArch"
-			logit "productBundleIdentifier:$productBundleIdentifier"
-			logit "productName:$productName"
-			logit "provisionProfileUuid:$provisionProfileUuid"
-			logit "provisionProfileName:$provisionProfileName"
 
-			logit "=============================="
+			logitVerbose "developmentTeam:$developmentTeam"
+			logitVerbose "infoPlistFile:$infoPlistFile"
+			logitVerbose "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
+			logitVerbose "onlyActiveArch:$onlyActiveArch"
+			logitVerbose "productBundleIdentifier:$productBundleIdentifier"
+			logitVerbose "productName:$productName"
+			logitVerbose "provisionProfileUuid:$provisionProfileUuid"
+			logitVerbose "provisionProfileName:$provisionProfileName"
+			logitVerbose "codeSignIdentity:$codeSignIdentity"
+			logitVerbose "codeSignIdentitySDK:$codeSignIdentitySDK"
 		done
 	done
 }
@@ -326,20 +328,17 @@ function setBuildVersion
 
 	for targetId in ${targets[@]}; do
 		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
-		logit "配置列表Id：$buildConfigurationListId"
 		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		buildConfigurations=(`echo $buildConfigurationList`)
-		logit "发现配置:$buildConfigurations"
 		for configurationId in ${buildConfigurations[@]}; do
 			infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		done
 	done
 
 	infoPlistFilePath=$xcodeProject/../$infoPlistFile
-	logit "设置${infoPlistFilePath} build 版本号:${gitVersionCount}!"
-
 	if [[ -f "$infoPlistFilePath" ]]; then
 		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" $infoPlistFilePath
+		logit "设置Buil Version:${gitVersionCount}"
 	else
 		echo "${infoPlistFilePath}文件不存在，无法修改"
 		exit 1
@@ -369,8 +368,6 @@ function setEnvironment
 			fi
 		fi
 	fi
-	getEnvirionment
-
 }
 
 ##设置NO,只打标准arch
@@ -709,12 +706,10 @@ if [[ -f $newProfile ]]; then
 	getNewProfileUuid
 	configureSigningByRuby
 fi
+showBuildSetting
 
 
-getBuildSettingsConfigure
-
-
-build
+#build
 
 
 
