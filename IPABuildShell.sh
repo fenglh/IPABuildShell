@@ -53,7 +53,7 @@ security="/usr/bin/security"
 codesign="/usr/bin/codesign"
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
-verbose=false
+verbose=true
 productionEnvironment=true
 debugConfiguration=false
 declare -a targetNames
@@ -90,7 +90,6 @@ function usage
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
 	echo "  -s: 指定签名identity."
 	echo "  -h: 帮助."
-  	echo "  -v: 输出详细信息."
 }
 
 ##显示可用的签名
@@ -660,6 +659,21 @@ function configureSigningByRuby
 }
 
 
+function loginKeychainAccess
+{
+	
+	#允许访问证书
+	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain"
+	if [[ $? -ne 0 ]]; then
+		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+		exit 1
+	fi
+	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain-db"
+		if [[ $? -ne 0 ]]; then
+		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+		exit 1
+	fi
+}
 
 while getopts p:f:s:xvhgtl option; do
   case "${option}" in
@@ -678,8 +692,7 @@ while getopts p:f:s:xvhgtl option; do
 done
 
 
-#允许访问证书
-$security unlock-keychain -p "123456" "$HOME/Library/Keychains/login.keychain"
+
 
 
 checkForProjectFile
@@ -705,6 +718,6 @@ build
 
 
 
-##所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
+#所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
 
 
