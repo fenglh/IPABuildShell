@@ -30,18 +30,28 @@
 #--------------------------------------------
 
 
-#--------------------------------------------
+#####################可配置项目#####################
+
+##个人账号：请把个人账号App的BundleId 配置在这里
+bundleIdPersionAccount=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
+##企业账号：请把企业账号App的BundleId 配置在这里
+bundleIdEnterpriseAccount=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
+
+#####################################################
+
+
+
+
+
+
+
+
 
 ##根据bundleId来识别该次打包的app是个人/企业账号，并根据授权描述文件来决定使用哪个证书
 persionDeveloperSignIdentifier="iPhone Developer: chao li (4PD2B29433)"
 persionDistributionSignIdentifier="iPhone Distribution: Blue Moon (China) Co., Ltd. (R6L6VZZQ6L)"
 enterpriseDeveloperSignIdentifier="iPhone Developer: Li Chao (BTTHBUB23E)"
 enterpriseDistributionSignIdentifier="iPhone Distribution: Blue Moon ( China ) Co., Ltd."
-
-bundleIdPersionAccount=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
-bundleIdEnterpriseAccount=(cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
-
-#--------------------------------------------
 
 ##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错
 export LANG=zh_CN.UTF-8
@@ -709,7 +719,7 @@ fi
 showBuildSetting
 
 
-#build
+build
 
 
 
