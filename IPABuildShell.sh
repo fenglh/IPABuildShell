@@ -33,27 +33,22 @@
 #####################可配置项目#####################
 
 ##个人账号：请把个人账号App的BundleId 配置在这里
-bundleIdPersionAccount=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
+bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
 ##企业账号：请把企业账号App的BundleId 配置在这里
-bundleIdEnterpriseAccount=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
+bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
 
 #####################################################
 
 
+##
+devCodeSignIdentityForPersion="iPhone Developer: chao li (4PD2B29433)"
+disCodeSignIdentityForPersion="iPhone Distribution: Blue Moon (China) Co., Ltd. (R6L6VZZQ6L)"
+
+devCodeSignIdentityForEnterprise="iPhone Developer: Li Chao (BTTHBUB23E)"
+disCodeSignIdentityForEnterprise="iPhone Distribution: Blue Moon ( China ) Co., Ltd."
 
 
-
-
-
-
-
-##根据bundleId来识别该次打包的app是个人/企业账号，并根据授权描述文件来决定使用哪个证书
-persionDeveloperSignIdentifier="iPhone Developer: chao li (4PD2B29433)"
-persionDistributionSignIdentifier="iPhone Distribution: Blue Moon (China) Co., Ltd. (R6L6VZZQ6L)"
-enterpriseDeveloperSignIdentifier="iPhone Developer: Li Chao (BTTHBUB23E)"
-enterpriseDistributionSignIdentifier="iPhone Distribution: Blue Moon ( China ) Co., Ltd."
-
-##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错
+##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错，貌似没用，暂时留在这里
 export LANG=zh_CN.UTF-8
 
 tmpLogFile=/tmp/`date +"%Y%m%d%H%M%S"`.txt
@@ -63,6 +58,8 @@ security="/usr/bin/security"
 codesign="/usr/bin/codesign"
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
+##默认分发渠道是内部测试
+channel='debug'
 verbose=true
 productionEnvironment=true
 debugConfiguration=false
@@ -99,6 +96,7 @@ function usage
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
 	echo "  -s: 指定签名identity."
+	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
 	echo "  -h: 帮助."
 }
 
@@ -201,24 +199,58 @@ function getGitVersionCount
 	logit "当前版本数量:$gitVersionCount"
 }
 
+##根据授权文件，自动匹配授权文件和签名身份
 
+function autoMatchProvisionFile
+{
+	##授权文件默认放置在和脚本同一个目录下的MobileProvisionFile 文件夹中
+	mobileProvisionFileDir="$( cd "$( dirname "$0"  )" && pwd  )/MobileProvisionFile"
+	if [[ ! -d "$mobileProvisionFileDir" ]]; then
+		echo "授权文件目录${mobileProvisionFileDir}不存在！"
+		exit 1
+	fi
 
-# ##获取scheme
-# function getSchemes
-# {
-# 	##获取scheme，替换#号，是为了方便赋值给数组。scheme名字带有空格的时候例如：Copy of BlueMoonSFA，会被误分割成数组的元素。
-# 	schemeList=(`$xcodebuild -project $xcodeProject -list | awk '/\Schemes/{s=$0~/Schemes/?1:0}s' | grep -v "Schemes:" | tr -s '\n'| tr -s ' ' '#'`)
-# 	for (( i = 0; i < ${#schemeList[@]}; i++ )); do
-# 		scheme=`echo ${schemeList[$i]} | tr -d '#'`
-# 		schemes[$i]=$scheme
-# 	done
+	matchMobileProvisionFile=''
+	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
+		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>1 )`
+		applicationIdentifier=${applicationIdentifier#*.}
+		if [[ "$appBundleId" == "$applicationIdentifier" ]]; then
+			getProfileType $file
+			if [[ "$profileType" == "$channel" ]]; then
+				matchMobileProvisionFile=$file
+				logit "匹配到${applicationIdentifier}的${channel}分发渠道的授权文件:$file"
+			fi
+		fi
+	done
 
-# 	logit "获取到schemes，数量：${#schemes[@]}"
-# 	for (( i = 0; i < ${#schemes[@]}; i++ )); do
-# 		logit "${schemes[$i]}"
-# 	done
-# }
+	if [[ $matchMobileProvisionFile == '' ]]; then
+		echo "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
+	fi
 
+}
+
+function autoMatchCodeSignIdentity
+{
+	
+	matchCodeSignIdentity=''
+	if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
+		if [[ "$channel" == 'debug' ]]; then
+			matchCodeSignIdentity=$devCodeSignIdentityForPersion
+		elif [[ "$channel" == 'appstore' ]]; then
+			matchCodeSignIdentity==$disCodeSignIdentityForPersion
+		fi
+	elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
+		if [[ "$channel" == 'debug' ]]; then
+			matchCodeSignIdentity=$devCodeSignIdentityForEnterprise
+		elif [[ "$channel" == 'enterprise' ]]; then
+			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
+		fi
+	else
+		echo "无法匹配$BundleId={appBundleId}的应用的签名，请检查是否是个新的应用!"
+		exit 1
+	fi
+	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
+}
 
 ##这里只取第一个target
 function getAllTargets
@@ -227,12 +259,26 @@ function getAllTargets
 	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" $projectFile | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
 	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
 	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
-	targets=(${targets[0]})
-	for targetId in ${targets[@]}; do
-		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
-		logit "target名字：$targetName"
-		buildTargetNames=(${buildTargetNames[*]} $targetName)
-	done
+	targetId=${targets[0]}
+	targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
+	logit "target名字：$targetName"
+	buildTargetNames=(${buildTargetNames[*]} $targetName)
+
+
+
+}
+
+
+function getAPPBundleId
+{
+	targetId=${targets[0]}
+	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	buildConfigurations=(`echo $buildConfigurationList`)
+	##因为无论release 和 debug 配置中bundleId都是一致的，所以随便取一个即可
+	configurationId=${buildConfigurations[0]}
+	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	logit "appBundleId:$appBundleId"
 
 }
 
@@ -242,43 +288,44 @@ function getAllTargets
 function showBuildSetting
 {
 	logitVerbose "======================当前Build Setting 配置======================"
-	for targetId in ${targets[@]}; do
-		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
-		logitVerbose "配置targetId：$buildConfigurationListId"
-		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		buildConfigurations=(`echo $buildConfigurationList`)
-		for configurationId in ${buildConfigurations[@]}; do
 
-			configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-			logitVerbose "配置类型: $configurationName"
-			# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
-			# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			codeSignIdentity=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			codeSignIdentitySDK=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY[sdk=iphoneos*]" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			developmentTeam=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			iphoneosDeploymentTarget=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:IPHONEOS_DEPLOYMENT_TARGET" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`			
-			productBundleIdentifier=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			productName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_NAME" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			provisionProfileUuid=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-			provisionProfileName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE_SPECIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	targetId=${targets[0]}
 
-			# logit "codeSignEntitlements:$codeSignEntitlements"
-			# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
+	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+	logitVerbose "配置targetId：$buildConfigurationListId"
+	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	buildConfigurations=(`echo $buildConfigurationList`)
+	for configurationId in ${buildConfigurations[@]}; do
 
-			logitVerbose "developmentTeam:$developmentTeam"
-			logitVerbose "infoPlistFile:$infoPlistFile"
-			logitVerbose "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
-			logitVerbose "onlyActiveArch:$onlyActiveArch"
-			logitVerbose "productBundleIdentifier:$productBundleIdentifier"
-			logitVerbose "productName:$productName"
-			logitVerbose "provisionProfileUuid:$provisionProfileUuid"
-			logitVerbose "provisionProfileName:$provisionProfileName"
-			logitVerbose "codeSignIdentity:$codeSignIdentity"
-			logitVerbose "codeSignIdentitySDK:$codeSignIdentitySDK"
-		done
+		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
+		logitVerbose "配置类型: $configurationName"
+		# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
+		# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		codeSignIdentity=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		codeSignIdentitySDK=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY[sdk=iphoneos*]" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		developmentTeam=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		iphoneosDeploymentTarget=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:IPHONEOS_DEPLOYMENT_TARGET" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`			
+		productBundleIdentifier=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		productName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_NAME" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		provisionProfileUuid=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		provisionProfileName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE_SPECIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+
+		# logit "codeSignEntitlements:$codeSignEntitlements"
+		# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
+
+		logitVerbose "developmentTeam:$developmentTeam"
+		logitVerbose "infoPlistFile:$infoPlistFile"
+		logitVerbose "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
+		logitVerbose "onlyActiveArch:$onlyActiveArch"
+		logitVerbose "BundleId:$productBundleIdentifier"
+		logitVerbose "productName:$productName"
+		logitVerbose "provisionProfileUuid:$provisionProfileUuid"
+		logitVerbose "provisionProfileName:$provisionProfileName"
+		logitVerbose "codeSignIdentity:$codeSignIdentity"
+		logitVerbose "codeSignIdentitySDK:$codeSignIdentitySDK"
 	done
 }
 
@@ -288,9 +335,9 @@ function showBuildSetting
 function getNewProfileUuid
 {
 
-	newProfileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
-	newProfileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
-	newTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$newProfile" )`
+	newProfileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	newProfileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	newTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
 	if [[ "$newProfileUuid" == '' ]]; then
 		echo "newProfileUuid=$newProfileUuid, 获取参数配置Profile的uuid失败!"
 		exit 1;
@@ -309,28 +356,28 @@ function getProfileType
 	profile=$1
 	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $($security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	##判断是否存在key:ProvisionedDevices
-	haveKey=`$security cms -D -i "$profile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
+	haveKey=`$security cms -D -i "$profile" 2>1 | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
 	if [[ $? -eq 0 ]]; then
-		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" ) `
+		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" 2>1) `
 		if [[ $getTaskAllow == true ]]; then
 			profileType='debug'
 		else
-			profileType='ad-hoc'
+			profileType='adhoc'
 		fi
 	else
-		provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" ) `
-		if [[ $provisionsAllDevices == true ]]; then
-			profileType='enterprise'
+
+		haveKeyProvisionsAllDevices=`$security cms -D -i "$profile" 2>1  | grep ProvisionsAllDevices`
+		if [[ "$haveKeyProvisionsAllDevices" != '' ]]; then
+			provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" 2>1) `
+			if [[ $provisionsAllDevices == true ]]; then
+				profileType='enterprise'
+			else
+				profileType='appstore'
+			fi
 		else
 			profileType='appstore'
 		fi
 	fi
-
-	logit "授权文件类型:$profileType"
-	if [[ "$haveKey" != '' ]]; then
-		logit "$provisionedDevices"
-	fi
-	
 }
 
 function setBuildVersion
@@ -422,66 +469,6 @@ function setManulSigning
 	
 }
 
-
-##这里忽略旧版本xcode没有
-function setProfile
-{
-	for configurationId in ${buildConfigurations[@]}; do
-		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		if [[ "$provisionProfileName" != "$newProfileName" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:PROVISIONING_PROFILE_SPECIFIER $newProfileName" "$projectFile"
-			logit "设置授权文件SPECIFIER${configurationName} PROVISIONING_PROFILE_SPECIFIER：$provisionProfileName --> $newProfileName"
-		fi
-
-		if [[ "$provisionProfileUuid" != "$newProfileUuid" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:PROVISIONING_PROFILE $newProfileUuid" "$projectFile"
-			logit "设置授权文件${configurationName} PROVISIONING_PROFILE：$provisionProfileUuid --> $newProfileUuid"
-		fi
-
-	done
-}
-
-##设置签名
-function setCodeSign
-{
-	for configurationId in ${buildConfigurations[@]}; do
-		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		##设置CODE_SIGN_IDENTITY
-		if [[ "$codeSignIdentity" != "$newCodeSign" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY $newCodeSign" "$projectFile"
-			if [[ $? -eq 0 ]]; then
-				logit "设置签名${configurationName} CODE_SIGN_IDENTITY: $codeSignIdentity --> $newCodeSign"
-			else
-				echo "设置签名${configurationName} CODE_SIGN_IDENTITY 失败!"
-				exit 1
-			fi
-
-			
-		fi
-		##设置CODE_SIGN_IDENTITY[sdk=iphoneos*]
-		if [[ "$codeSignIdentitySDK" != "$newCodeSign" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY[sdk=iphoneos*] $newCodeSign" "$projectFile"
-			if [[ $? -eq 0 ]]; then
-				logit "更改签名配置${configurationName} CODE_SIGN_IDENTITY[sdk=iphoneos*]: $codeSignIdentitySDK --> $newCodeSign"
-			else
-				echo "更改签名配置${configurationName} CODE_SIGN_IDENTITY[sdk=iphoneos*] 失败!"
-				exit 1
-			fi
-			
-		fi
-		##设置teamId
-		if [[ "$developmentTeam" != "$newTeamId" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM $newTeamId" "$projectFile"
-			if [[ $? -eq 0 ]]; then
-				logit "更改签名配置${configurationName} DEVELOPMENT_TEAM: $developmentTeam --> $newTeamId"
-			else
-				echo "更改签名配置${configurationName} DEVELOPMENT_TEAM 失败!"
-				exit 1
-			fi
-			
-		fi
-	done
-}
 
 
 function build
@@ -585,9 +572,9 @@ function checkIPA
 		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$infoPlistFile"`
 		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $infoPlistFile`
 		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
-		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
-		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
-		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" )`
+		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
+		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
+		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
 		appCodeSignIdenfifier=`$codesign --display -r- $app | cut -d "\"" -f 4`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
@@ -606,6 +593,7 @@ function checkIPA
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
 		getProfileType $mobileProvisionFile
+		logit "授权文件类型:$profileType"	
 
 	else
 		echo "解压失败！无法找到$app"
@@ -653,7 +641,7 @@ function configureSigningByRuby
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
 
-	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid $newProfileName "$newCodeSign"  $newTeamId
+	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid $newProfileName "$matchCodeSignIdentity"  $newTeamId
 
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"
@@ -670,24 +658,39 @@ function loginKeychainAccess
 {
 	
 	#允许访问证书
-	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain"
+	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain" 2>1
 	if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
 	fi
-	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain-db"
+	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain-db" 2>1
 		if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
 	fi
 }
 
-while getopts p:f:s:xvhgtl option; do
+
+
+function checkChannel
+{
+	OPTARG=$1
+	if [[ "$OPTARG" != "debug" ]] && [[ "$OPTARG" != "appstore" ]] && [[ "$OPTARG" != "enterprise" ]]; then
+		echo "-c 参数不能配置值：$OPTARG"
+		usage
+		exit 1
+	fi
+	channel=${OPTARG}
+
+}
+
+
+
+while getopts p:c:xvhgtl option; do
   case "${option}" in
   	g) getGitVersionCount;exit;;
     p) xcodeProject=${OPTARG};;
-	f) newProfile=${OPTARG};;
-	s) newCodeSign=${OPTARG};;
+	c) checkChannel ${OPTARG};;
 	t) productionEnvironment=false;;
 	l) showUsableCodeSign;exit;;
     x) set -x;;
@@ -708,15 +711,18 @@ checkEnvironmentConfigureFile
 
 getEnvirionment
 getAllTargets
+getAPPBundleId
+autoMatchProvisionFile
+autoMatchCodeSignIdentity
 getGitVersionCount
 getCodeSigningStyle
 setEnvironment
 setBuildVersion
-if [[ -f $newProfile ]]; then
-	getNewProfileUuid
-	configureSigningByRuby
-fi
+getNewProfileUuid
+configureSigningByRuby
 showBuildSetting
+
+
 
 
 build
