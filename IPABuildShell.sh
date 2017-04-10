@@ -85,19 +85,19 @@ function setAliasShortCut
 		touch $bashProfile
 	fi
 	currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )/`basename "$0"`"
-	aliasString="alias gn=\"$currentShellDir -g\""
-	grep "$aliasString" $bashProfile
-	if [[ $? -ne 0 ]]; then
-		echo $aliasString > $bashProfile
-	fi
 
+	aliasString="alias gn=\"$currentShellDir -g\"" 
+	grep "$aliasString" $bashProfile 
+	if [[ $? -ne 0 ]]; then
+		echo $aliasString >> $bashProfile 
+	fi
 }
 
 function usage
 {
 	setAliasShortCut
 
-	echo "  -p <Xcode Project File>: 指定Xcode project."
+	echo "  -p <Xcode Project File>: 指定Xcode project. 如果使用该参数，脚本会自动在当前目录查看Xcode Project 文件"
 	echo "  -g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source $bashProfile)"
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
