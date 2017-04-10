@@ -1,12 +1,13 @@
 #!/bin/bash
 #--------------------------------------------
+# 版本：2.0.0
 # 功能：
 #		1.显示Build Settings 签名配置
 #		2.获取git版本数量，并自动更改build号为版本数量号
 #		3.日志文本log.txt输出
 #		4.支持可以配置的签名、授权文件等
 #		5.支持workplace、多个scheme
-#		6.校验构建后的ipa的bundle Id、签名方式、支持最低iOS版本、arm体系等等
+#		6.校验构建后的ipa的bundle Id、签名、支持最低iOS版本、arm体系等等
 #		7.构建前清理缓存,防止xib更改没有被重新编译
 #		8.备份历史打包ipa以及log.txt
 #		9.可更改OC代码，自动配置服务器测试环境or生产环境
@@ -18,6 +19,15 @@
 #		1.security 命令会报警告,忽略即可:security: SecPolicySetValue: One or more parameters passed to a function were not valid.
 #		2.支持Xcode8.0及以上版本（8.0前没有测试过）
 #--------------------------------------------
+#
+# 版本：2.1.0
+# 优化：
+#		1.去掉可配置签名、授权文件，并修改为自动匹配签名和授权文件！
+# 作者：
+#		fenglh	2016/03/06
+#
+#
+#
 
 #--------------------------------------------
 	# 没有任何修饰符参数 : 原生参数
@@ -88,14 +98,11 @@ function usage
 	setAliasShortCut
 
 	echo "  -p <Xcode Project File>: 指定Xcode project."
-	echo "  -f <Profile>: 指定授权文件."
-	echo "  -s <codeSign identify>: 指定签名，使用-l 参数列举可用签名."
 	echo "  -g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source $bashProfile)"
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
-	echo "  -s: 指定签名identity."
 	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
 	echo "  -h: 帮助."
 }
@@ -582,6 +589,7 @@ function checkIPA
 		supportArchitectures=`$lipo -info $app/$appName | cut -d ":" -f 3`
 
 		logit "名字:$appShowingName"
+		getEnvirionment
 		logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 		logit "bundle identify:$appBundleId"
 		logit "版本:$appVersion"
