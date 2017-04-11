@@ -272,7 +272,7 @@ function getAllTargets
 	targetId=${targets[0]}
 	targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
 	logit "target名字：$targetName"
-	buildTargetNames=(${buildTargetNames[*]} $targetName)
+	# buildTargetNames=(${buildTargetNames[*]} $targetName)
 
 
 
@@ -491,45 +491,38 @@ function build
 		configuration="Release"
 	fi
 
-	for (( i = 0; i < ${#buildTargetNames[@]}; i++ )); do
-
-		archivePath=${packageDir}/${buildTargetNames[$i]}.xcarchive
-		exprotPath=${packageDir}/${buildTargetNames[$i]}.ipa
+	archivePath=${packageDir}/$targetName.xcarchive
+	exprotPath=${packageDir}/$targetName.ipa
 
 
-		if [[ -d $archivePath ]]; then
-			rm -rf $archivePath
-		fi
+	if [[ -d $archivePath ]]; then
+		rm -rf $archivePath
+	fi
 
-		if [[ -f $exprotPath ]]; then
-			rm -rf $exprotPath
-		fi
+	if [[ -f $exprotPath ]]; then
+		rm -rf $exprotPath
+	fi
 
-		if [[ $isExistXcWorkspace == true ]]; then
-			$xcodebuild archive -workspace $xcworkspace -scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build  
-		else
-			$xcodebuild archive						 	-scheme ${buildTargetNames[$i]} -archivePath $archivePath -configuration $configuration build 
-		fi
-		# $cmd
-		if [[ $? -ne 0 ]]; then
-			echo "构建失败！构建命令：$cmd" 
-			rm -rf ${packageDir}/*
-			exit 1
-		fi
+	if [[ $isExistXcWorkspace == true ]]; then
+		$xcodebuild archive -workspace $xcworkspace -scheme $targetName -archivePath $archivePath -configuration $configuration build  
+	else
+		$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build 
+	fi
+	# $cmd
+	if [[ $? -ne 0 ]]; then
+		echo "构建失败！构建命令：$cmd" 
+		rm -rf ${packageDir}/*
+		exit 1
+	fi
 
-		##导出ipa
-		$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 
-		if [[ $? -eq 0 ]]; then
-			logit "打包成功,IPA生成路径：$exprotPath"
-		else
-			logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
-			exit 1
-		fi
-		repairXcentFile
-		checkIPA
-		renameAndBackup
-
-	done
+	##导出ipa
+	$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 
+	if [[ $? -eq 0 ]]; then
+		logit "打包成功,IPA生成路径：$exprotPath"
+	else
+		logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
+		exit 1
+	fi
 }
 
 ##在打企业包的时候：会报 archived-expanded-entitlements.xcent  文件缺失!这是xcode的bug
@@ -733,10 +726,10 @@ getNewProfileUuid
 configureSigningByRuby
 showBuildSetting
 
-
-
-
 build
+repairXcentFile
+checkIPA
+renameAndBackup
 
 
 
