@@ -237,6 +237,20 @@ function autoMatchProvisionFile
 		echo "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
 	fi
 
+	##获取授权文件uuid、name、teamId
+	profileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	profileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	profileTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	if [[ "$profileUuid" == '' ]]; then
+		echo "profileUuid=$profileUuid, 获取参数配置Profile的uuid失败!"
+		exit 1;
+	fi
+	if [[ "$profileName" == '' ]]; then
+		echo "profileName=$profileName, 获取参数配置Profile的name失败!"
+		exit 1;
+	fi
+	logit "发现授权文件参数配置:${profileName}, uuid：$profileUuid, teamId:$profileTeamId"
+
 }
 
 function autoMatchCodeSignIdentity
@@ -342,22 +356,6 @@ function showBuildSetting
 
 
 
-function getNewProfileUuid
-{
-
-	newProfileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
-	newProfileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
-	newTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
-	if [[ "$newProfileUuid" == '' ]]; then
-		echo "newProfileUuid=$newProfileUuid, 获取参数配置Profile的uuid失败!"
-		exit 1;
-	fi
-	if [[ "$newProfileName" == '' ]]; then
-		echo "newProfileName=$newProfileName, 获取参数配置Profile的name失败!"
-		exit 1;
-	fi
-	logit "发现授权文件参数配置:${newProfileName}, uuid：$newProfileUuid, teamId:$newTeamId"
-}
 
 
 ##检查授权文件类型
@@ -390,6 +388,7 @@ function getProfileType
 	fi
 }
 
+##设置build version
 function setBuildVersion
 {
 
@@ -480,7 +479,7 @@ function setManulSigning
 }
 
 
-
+###开始构建
 function build
 {
 	packageDir=$xcodeProject/../build/package
@@ -605,6 +604,7 @@ function checkIPA
 	fi
 }
 
+##重命名和备份
 function renameAndBackup
 {
 	backupDir=~/Desktop/PackageLog
@@ -639,13 +639,14 @@ function renameAndBackup
 	
 }
 
+##配置证书身份和授权文件
 function configureSigningByRuby
 {
 	logit "========================配置Signing========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 
 
-	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $newProfileUuid $newProfileName "$matchCodeSignIdentity"  $newTeamId
+	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
 
 	if [[ $? -ne 0 ]]; then
 		echo "xcocdeModify.rb 修改配置失败！！"
@@ -657,7 +658,7 @@ function configureSigningByRuby
 	logit "========================配置完成========================"
 }
 
-
+##登录keychain授权
 function loginKeychainAccess
 {
 	
@@ -675,7 +676,7 @@ function loginKeychainAccess
 }
 
 
-
+###检查输入的分发渠道
 function checkChannel
 {
 	OPTARG=$1
@@ -722,7 +723,6 @@ getGitVersionCount
 getCodeSigningStyle
 setEnvironment
 setBuildVersion
-getNewProfileUuid
 configureSigningByRuby
 showBuildSetting
 
