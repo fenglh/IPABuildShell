@@ -47,8 +47,11 @@ bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
 ##企业账号：请把企业账号App的BundleId 配置在这里
 bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
 
-#####################################################
 
+loginPwd='123456'
+
+
+#####################################################
 
 ##
 devCodeSignIdentityForPersion="iPhone Developer: chao li (4PD2B29433)"
@@ -666,12 +669,12 @@ function loginKeychainAccess
 {
 	
 	#允许访问证书
-	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain" 2>1
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>1
 	if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
 	fi
-	$security unlock-keychain -p "asdfghjkl" "$HOME/Library/Keychains/login.keychain-db" 2>1
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>1
 		if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
