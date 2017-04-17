@@ -92,7 +92,7 @@ environmentConfigureFileName="BMNetworkingConfiguration.h"
 function clean
 {
 	for file in `ls $backupDir` ; do
-		echo "文件或者文件夹：$file"
+		echo "清除上一次打包的文件或者文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
 			mv -f $backupDir/$file $backupHistoryDir
 			if [[ $? -ne 0 ]]; then
