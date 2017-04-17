@@ -635,7 +635,7 @@ function renameAndBackup
 	mv -f $backupDir/*.ipa  $backupHistoryDir
 	mv -f $backupDir/*.txt  $backupHistoryDir
 	mv $exprotPath ./$ipaName
-	cp -af $exprotPath $backupDir/$ipaName
+	cp -af $ipaName $backupDir/$ipaName
 	cp -af $tmpLogFile $backupDir/$textLogName
 	
 }
