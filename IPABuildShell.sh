@@ -5,14 +5,13 @@
 #		1.显示Build Settings 签名配置
 #		2.获取git版本数量，并自动更改build号为版本数量号
 #		3.日志文本log.txt输出
-#		4.支持可以配置的签名、授权文件等
+#		4.自动匹配签名和授权文件
 #		5.支持workplace、多个scheme
 #		6.校验构建后的ipa的bundle Id、签名、支持最低iOS版本、arm体系等等
 #		7.构建前清理缓存,防止xib更改没有被重新编译
 #		8.备份历史打包ipa以及log.txt
 #		9.可更改OC代码，自动配置服务器测试环境or生产环境
 #		10.格式化输出ipa包名称：name_time_开发环境_企业分发_1.0.0(168).ipa
-#		11.设置手动签名
 # 作者：
 #		fenglh	2016/03/06
 # 备注：
@@ -26,6 +25,14 @@
 # 作者：
 #		fenglh	2016/03/06
 #
+#
+#--------------------------------------------
+#
+# 版本：2.1.1
+# 优化：
+#		profileType==debug时，设置ARCHS='arm64' ，否则archs为默认值：arm64 和armv7。节省一半时间!
+# 作者：
+#		fenglh	2016/03/06
 #
 #
 
@@ -64,6 +71,8 @@ disCodeSignIdentityForEnterprise="iPhone Distribution: Blue Moon ( China ) Co., 
 ##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错，貌似没用，暂时留在这里
 export LANG=zh_CN.UTF-8
 
+backupDir=~/Desktop/PackageLog
+backupHistoryDir=~/Desktop/PackageLog/history/
 tmpLogFile=/tmp/`date +"%Y%m%d%H%M%S"`.txt
 plistBuddy="/usr/libexec/PlistBuddy"
 xcodebuild="/usr/bin/xcodebuild"
@@ -79,6 +88,20 @@ debugConfiguration=false
 declare -a targetNames
 environmentConfigureFileName="BMNetworkingConfiguration.h"
 
+
+function clean
+{
+	for file in `ls $backupDir` ; do
+		echo "文件或者文件夹：$file"
+		if [[ "$file" != 'History' ]]; then
+			mv -f $backupDir/$file $backupHistoryDir
+			if [[ $? -ne 0 ]]; then
+				echo "删除失败!"
+				exit 1
+			fi
+		fi
+	done
+}
 
 ##设置命令快捷方式
 function setAliasShortCut
@@ -222,25 +245,27 @@ function autoMatchProvisionFile
 
 	matchMobileProvisionFile=''
 	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
-		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>1 )`
+		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
 		applicationIdentifier=${applicationIdentifier#*.}
 		if [[ "$appBundleId" == "$applicationIdentifier" ]]; then
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
 				matchMobileProvisionFile=$file
 				logit "匹配到${applicationIdentifier}的${channel}分发渠道的授权文件:$file"
+				break
 			fi
 		fi
 	done
 
 	if [[ $matchMobileProvisionFile == '' ]]; then
 		echo "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
+		exit 1
 	fi
 
 	##获取授权文件uuid、name、teamId
-	profileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
-	profileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
-	profileTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>1)`
+	profileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
+	profileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
+	profileTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
 	if [[ "$profileUuid" == '' ]]; then
 		echo "profileUuid=$profileUuid, 获取参数配置Profile的uuid失败!"
 		exit 1;
@@ -277,7 +302,7 @@ function autoMatchCodeSignIdentity
 }
 
 ##这里只取第一个target
-function getAllTargets
+function getFirstTargets
 {
 	rootObject=`$plistBuddy -c "Print :rootObject" $projectFile`
 	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" $projectFile | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
@@ -364,9 +389,9 @@ function getProfileType
 	profile=$1
 	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $($security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	##判断是否存在key:ProvisionedDevices
-	haveKey=`$security cms -D -i "$profile" 2>1 | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
+	haveKey=`$security cms -D -i "$profile" 2>/tmp/log.txt | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
 	if [[ $? -eq 0 ]]; then
-		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" 2>1) `
+		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" 2>/tmp/log.txt) `
 		if [[ $getTaskAllow == true ]]; then
 			profileType='debug'
 		else
@@ -374,9 +399,9 @@ function getProfileType
 		fi
 	else
 
-		haveKeyProvisionsAllDevices=`$security cms -D -i "$profile" 2>1  | grep ProvisionsAllDevices`
+		haveKeyProvisionsAllDevices=`$security cms -D -i "$profile" 2>/tmp/log.txt  | grep ProvisionsAllDevices`
 		if [[ "$haveKeyProvisionsAllDevices" != '' ]]; then
-			provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" 2>1) `
+			provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" 2>/tmp/log.txt) `
 			if [[ $provisionsAllDevices == true ]]; then
 				profileType='enterprise'
 			else
@@ -456,26 +481,19 @@ function setOnlyActiveArch
 ##获取签名方式
 function getCodeSigningStyle
 {
-	for targetId in ${targets[@]}; do
-		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
-		##没有勾选过Automatically manage signning时，则不存在ProvisioningStyle
-		signingStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
-		logit "获取到target:${targetName}签名方式:$signingStyle"
-	done
+	targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
+	##没有勾选过Automatically manage signning时，则不存在ProvisioningStyle
+	signingStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
+	logit "获取到target:${targetName}签名方式:$signingStyle"
 }
 
 function setManulSigning
 {
-	for targetId in ${targets[@]}; do
-		targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
-		if [[ "$signingStyle" != "Manual" ]]; then
-			##如果需要设置成自动签名,将Manual改成Automatic
-			$plistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$projectFile"
-			logit "设置${targetName}的签名方式为:Manual"
-		fi
-
-	done
-	
+	if [[ "$signingStyle" != "Manual" ]]; then
+		##如果需要设置成自动签名,将Manual改成Automatic
+		$plistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$projectFile"
+		logit "设置${targetName}的签名方式为:Manual"
+	fi
 }
 
 
@@ -483,7 +501,7 @@ function setManulSigning
 function build
 {
 	packageDir=$xcodeProject/../build/package
-
+	rm -rf $packageDir/*
 	if [[ $debugConfiguration == true ]]; then
 		configuration="Debug"
 	else
@@ -502,17 +520,26 @@ function build
 		rm -rf $exprotPath
 	fi
 
+	
 	if [[ $isExistXcWorkspace == true ]]; then
-		$xcodebuild archive -workspace $xcworkspace -scheme $targetName -archivePath $archivePath -configuration $configuration build  
+		cmd="$xcodebuild archive -workspace $xcworkspace -scheme $targetName -archivePath $archivePath -configuration $configuration build"
 	else
-		$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build 
+		cmd="$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build"
 	fi
-	# $cmd
+
+	##如果使用debug，那么都指定archs=arm64
+	if [[ "$profileType" == "debug" ]]; then
+		cmd="$cmd ARCHS='arm64'"
+	fi
+
+	$cmd
 	if [[ $? -ne 0 ]]; then
 		echo "构建失败！构建命令：$cmd" 
 		rm -rf ${packageDir}/*
 		exit 1
 	fi
+	echo "构建成功，构建命令：$cmd"
+
 
 	##导出ipa
 	$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 
@@ -538,7 +565,7 @@ function repairXcentFile
 		cp -af $xcentFile $app
 		##压缩,并覆盖原有的ipa
 		cd ${packageDir}  ##必须cd到此目录 ，否则zip会包含绝对路径
-		zip -qry  $exprotPath Payload && rm -rf Payload
+		zip -qry  $exprotPath Payload >/dev/null 2>&1 && rm -rf Payload
 		cd -
 	else
 		echo "$xcentFile 文件不存在，修复Xcent文件失败!"
@@ -574,9 +601,9 @@ function checkIPA
 		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$infoPlistFile"`
 		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $infoPlistFile`
 		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
-		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
-		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
-		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>1)`
+		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
+		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
+		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
 		appCodeSignIdenfifier=`$codesign --display -r- $app | cut -d "\"" -f 4`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
@@ -607,8 +634,7 @@ function checkIPA
 ##重命名和备份
 function renameAndBackup
 {
-	backupDir=~/Desktop/PackageLog
-	backupHistoryDir=~/Desktop/PackageLog/history
+
 	if [[ ! -d backupHistoryDir ]]; then
 		mkdir -p $backupHistoryDir
 	fi
@@ -631,14 +657,13 @@ function renameAndBackup
 	ipaName=${name}.ipa
 	textLogName=${name}.txt
 	logit "ipa重命名并备份到：$backupDir/$ipaName"
-	
-	mv -f $backupDir/*.ipa  $backupHistoryDir
-	mv -f $backupDir/*.txt  $backupHistoryDir
-	mv $exprotPath ./$ipaName
-	cp -af $ipaName $backupDir/$ipaName
+
+	mv $exprotPath $packageDir/$ipaName
+	cp -af $packageDir/$ipaName $backupDir/$ipaName
 	cp -af $tmpLogFile $backupDir/$textLogName
 	
 }
+
 
 ##配置证书身份和授权文件
 function configureSigningByRuby
@@ -664,12 +689,12 @@ function loginKeychainAccess
 {
 	
 	#允许访问证书
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>1
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
 	if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
 	fi
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>1
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>/tmp/log.txt
 		if [[ $? -ne 0 ]]; then
 		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
 		exit 1
@@ -709,14 +734,16 @@ done
 
 
 
+startDateSeconds=`date +%s`
 
+clean
 loginKeychainAccess
 checkForProjectFile
 checkIsExistWorkplace
 checkEnvironmentConfigureFile
 
 getEnvirionment
-getAllTargets
+getFirstTargets
 getAPPBundleId
 autoMatchProvisionFile
 autoMatchCodeSignIdentity
@@ -732,6 +759,8 @@ repairXcentFile
 checkIPA
 renameAndBackup
 
+endDateSeconds=`date +%s`
+logit "构建时间：$((${endDateSeconds}-${startDateSeconds})) 秒"
 
 
 #所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
