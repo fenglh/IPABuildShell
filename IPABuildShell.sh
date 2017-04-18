@@ -247,6 +247,8 @@ function autoMatchProvisionFile
 	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
 		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
 		applicationIdentifier=${applicationIdentifier#*.}
+		logit "$applicationIdentifier"
+		logit "$appBundleId"
 		if [[ "$appBundleId" == "$applicationIdentifier" ]]; then
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
