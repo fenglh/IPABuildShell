@@ -528,7 +528,7 @@ function build
 
 	##如果使用debug，那么都指定archs=arm64
 	if [[ "$profileType" == "debug" ]]; then
-		cmd="$cmd ARCHS='arm64'"
+		cmd="$cmd ARCHS='armv7'"
 	fi
 
 	$cmd
