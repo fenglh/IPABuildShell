@@ -178,10 +178,10 @@ function checkForProjectFile
 	else
 		projectFile="$xcodeProject/project.pbxproj"
 		if [[ ! -f "$projectFile" ]]; then
-			echo "项目文件:$projectFile 不存在"
+			echo "项目文件:"$projectFile" 不存在"
 			exit 1;
 		fi
-		logit "发现pbxproj:$projectFile"
+		logit "发现pbxproj:"$projectFile""
 	fi
 
 
@@ -247,8 +247,6 @@ function autoMatchProvisionFile
 	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
 		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
 		applicationIdentifier=${applicationIdentifier#*.}
-		logit "$applicationIdentifier"
-		logit "$appBundleId"
 		if [[ "$appBundleId" == "$applicationIdentifier" ]]; then
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
@@ -306,12 +304,12 @@ function autoMatchCodeSignIdentity
 ##这里只取第一个target
 function getFirstTargets
 {
-	rootObject=`$plistBuddy -c "Print :rootObject" $projectFile`
-	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" $projectFile | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
+	rootObject=`$plistBuddy -c "Print :rootObject" "$projectFile"`
+	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
 	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
 	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
 	targetId=${targets[0]}
-	targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
+	targetName=`$plistBuddy -c "Print :objects:$targetId:name" "$projectFile"`
 	logit "target名字：$targetName"
 	# buildTargetNames=(${buildTargetNames[*]} $targetName)
 
@@ -323,7 +321,7 @@ function getFirstTargets
 function getAPPBundleId
 {
 	targetId=${targets[0]}
-	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
 	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	buildConfigurations=(`echo $buildConfigurationList`)
 	##因为无论release 和 debug 配置中bundleId都是一致的，所以随便取一个即可
@@ -342,7 +340,7 @@ function showBuildSetting
 
 	targetId=${targets[0]}
 
-	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
 	logitVerbose "配置targetId：$buildConfigurationListId"
 	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	buildConfigurations=(`echo $buildConfigurationList`)
@@ -420,7 +418,7 @@ function setBuildVersion
 {
 
 	for targetId in ${targets[@]}; do
-		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" $projectFile`
+		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
 		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		buildConfigurations=(`echo $buildConfigurationList`)
 		for configurationId in ${buildConfigurations[@]}; do
@@ -483,7 +481,6 @@ function setOnlyActiveArch
 ##获取签名方式
 function getCodeSigningStyle
 {
-	targetName=`$plistBuddy -c "Print :objects:$targetId:name" $projectFile`
 	##没有勾选过Automatically manage signning时，则不存在ProvisioningStyle
 	signingStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
 	logit "获取到target:${targetName}签名方式:$signingStyle"
