@@ -178,10 +178,10 @@ function checkForProjectFile
 	else
 		projectFile="$xcodeProject/project.pbxproj"
 		if [[ ! -f "$projectFile" ]]; then
-			echo "项目文件:"$projectFile" 不存在"
+			echo "项目文件:\"$projectFile\" 不存在"
 			exit 1;
 		fi
-		logit "发现pbxproj:"$projectFile""
+		logit "发现pbxproj:\"$projectFile\""
 	fi
 
 
@@ -426,9 +426,9 @@ function setBuildVersion
 		done
 	done
 
-	infoPlistFilePath=$xcodeProject/../$infoPlistFile
+	infoPlistFilePath="$xcodeProject"/../$infoPlistFile
 	if [[ -f "$infoPlistFilePath" ]]; then
-		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" $infoPlistFilePath
+		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
 		logit "设置Buil Version:${gitVersionCount}"
 	else
 		echo "${infoPlistFilePath}文件不存在，无法修改"
@@ -499,53 +499,62 @@ function setManulSigning
 ###开始构建
 function build
 {
-	packageDir=$xcodeProject/../build/package
-	rm -rf $packageDir/*
+	packageDir="$xcodeProject"/../build/package
+	rm -rf "$packageDir"/*
 	if [[ $debugConfiguration == true ]]; then
 		configuration="Debug"
 	else
 		configuration="Release"
 	fi
 
-	archivePath=${packageDir}/$targetName.xcarchive
-	exprotPath=${packageDir}/$targetName.ipa
+	archivePath="${packageDir}"/$targetName.xcarchive
+	exprotPath="${packageDir}"/$targetName.ipa
 
 
-	if [[ -d $archivePath ]]; then
-		rm -rf $archivePath
+	if [[ -d "$archivePath" ]]; then
+		rm -rf "$archivePath"
 	fi
 
-	if [[ -f $exprotPath ]]; then
-		rm -rf $exprotPath
+	if [[ -f "$exprotPath" ]]; then
+		rm -rf "$exprotPath"
 	fi
 
 	
 	if [[ $isExistXcWorkspace == true ]]; then
-		cmd="$xcodebuild archive -workspace $xcworkspace -scheme $targetName -archivePath $archivePath -configuration $configuration build"
+
+		##如果使用debug，那么都指定archs=armv7 （向下兼容）
+		if [[ "$profileType" == "debug" ]]; then
+			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS='armv7'
+		else
+			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
+		fi
+		
 	else
-		cmd="$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build"
+		##如果使用debug，那么都指定archs=armv7 （向下兼容）
+		if [[ "$profileType" == "debug" ]]; then
+			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS='armv7'
+		else
+			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
+		fi
+
+
+		
 	fi
 
-	##如果使用debug，那么都指定archs=armv7 （向下兼容）
-	if [[ "$profileType" == "debug" ]]; then
-		cmd="$cmd ARCHS='armv7'"
-	fi
-
-	$cmd
 	if [[ $? -ne 0 ]]; then
-		echo "构建失败！构建命令：$cmd" 
-		rm -rf ${packageDir}/*
+		echo "构建失败！" 
+		rm -rf "${packageDir}"/*
 		exit 1
 	fi
-	echo "构建成功，构建命令：$cmd"
+
 
 
 	##导出ipa
-	$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 
+	$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath" 
 	if [[ $? -eq 0 ]]; then
-		logit "打包成功,IPA生成路径：$exprotPath"
+		logit "打包成功,IPA生成路径：\"$exprotPath\""
 	else
-		logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 执行失败"
+		logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\" 执行失败"
 		exit 1
 	fi
 }
@@ -555,19 +564,19 @@ function build
 function repairXcentFile
 {
 
-	appName=`basename $exprotPath .ipa`
-	xcentFile=${archivePath}/Products/Applications/${appName}.app/archived-expanded-entitlements.xcent
+	appName=`basename "$exprotPath" .ipa`
+	xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
 	if [[ -f "$xcentFile" ]]; then
-		logit  "拷贝xcent文件：$xcentFile "
-		unzip -o $exprotPath -d /$packageDir >/dev/null 2>&1
-		app=${packageDir}/Payload/${appName}.app
-		cp -af $xcentFile $app
+		logit  "拷贝xcent文件：\"$xcentFile\" "
+		unzip -o "$exprotPath" -d /"$packageDir" >/dev/null 2>&1
+		app="${packageDir}"/Payload/"${appName}".app
+		cp -af "$xcentFile" "$app"
 		##压缩,并覆盖原有的ipa
-		cd ${packageDir}  ##必须cd到此目录 ，否则zip会包含绝对路径
-		zip -qry  $exprotPath Payload >/dev/null 2>&1 && rm -rf Payload
+		cd "${packageDir}"  ##必须cd到此目录 ，否则zip会包含绝对路径
+		zip -qry  "$exprotPath" Payload >/dev/null 2>&1 && rm -rf Payload
 		cd -
 	else
-		echo "$xcentFile 文件不存在，修复Xcent文件失败!"
+		echo "\"$xcentFile\" 文件不存在，修复Xcent文件失败!"
 		exit 1
 	fi
 
@@ -582,9 +591,9 @@ function checkIPA
 	if [[ -d /tmp/Payload ]]; then
 		rm -rf /tmp/Payload
 	fi
-	unzip -o $exprotPath -d /tmp/ >/dev/null 2>&1
-	appName=`basename $exprotPath .ipa`
-	app=/tmp/Payload/${appName}.app
+	unzip -o "$exprotPath" -d /tmp/ >/dev/null 2>&1
+	appName=`basename "$exprotPath" .ipa`
+	app=/tmp/Payload/"${appName}".app
 	codesign --no-strict -v "$app"
 	if [[ $? -ne 0 ]]; then
 		echo "签名检查：签名校验不通过！"
@@ -592,7 +601,7 @@ function checkIPA
 	fi
 	logit ""
 	logit "==============签名检查：签名校验通过！==============="
-	if [[ -d $app ]]; then
+	if [[ -d "$app" ]]; then
 		infoPlistFile=${app}/Info.plist
 		mobileProvisionFile=${app}/embedded.mobileprovision
 
@@ -603,11 +612,11 @@ function checkIPA
 		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
 		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-		appCodeSignIdenfifier=`$codesign --display -r- $app | cut -d "\"" -f 4`
+		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
 		#支持的arch
-		supportArchitectures=`$lipo -info $app/$appName | cut -d ":" -f 3`
+		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
 
 		logit "名字:$appShowingName"
 		getEnvirionment
@@ -657,8 +666,8 @@ function renameAndBackup
 	textLogName=${name}.txt
 	logit "ipa重命名并备份到：$backupDir/$ipaName"
 
-	mv $exprotPath $packageDir/$ipaName
-	cp -af $packageDir/$ipaName $backupDir/$ipaName
+	mv "$exprotPath" "$packageDir"/$ipaName
+	cp -af "$packageDir"/$ipaName $backupDir/$ipaName
 	cp -af $tmpLogFile $backupDir/$textLogName
 	
 }
