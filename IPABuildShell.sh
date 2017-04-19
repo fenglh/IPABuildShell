@@ -521,15 +521,15 @@ function build
 
 	
 	if [[ $isExistXcWorkspace == true ]]; then
-		cmd="$xcodebuild archive -workspace \"$xcworkspace\" -scheme \"$targetName\" -archivePath \"$archivePath\" -configuration $configuration build"
+		cmd="$xcodebuild archive -workspace $xcworkspace -scheme $targetName -archivePath $archivePath -configuration $configuration build"
 	else
-		cmd="$xcodebuild archive						 	-scheme \"$targetName\" -archivePath \"$archivePath\" -configuration $configuration build"
+		cmd="$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build"
 	fi
 
-	##如果使用debug，那么都指定archs=arm64
-	if [[ "$profileType" == "debug" ]]; then
-		cmd="$cmd ARCHS='armv7'"
-	fi
+	# ##如果使用debug，那么都指定archs=arm64
+	# if [[ "$profileType" == "debug" ]]; then
+	# 	cmd="$cmd ARCHS='armv7'"
+	# fi
 
 	$cmd
 	if [[ $? -ne 0 ]]; then
@@ -541,7 +541,7 @@ function build
 
 
 	##导出ipa
-	$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath" 
+	$xcodebuild -exportArchive -exportFormat IPA -archivePath $archivePath -exportPath $exprotPath 
 	if [[ $? -eq 0 ]]; then
 		logit "打包成功,IPA生成路径：$exprotPath"
 	else
