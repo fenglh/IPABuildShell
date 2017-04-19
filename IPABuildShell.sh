@@ -286,7 +286,7 @@ function autoMatchCodeSignIdentity
 		if [[ "$channel" == 'debug' ]]; then
 			matchCodeSignIdentity=$devCodeSignIdentityForPersion
 		elif [[ "$channel" == 'appstore' ]]; then
-			matchCodeSignIdentity==$disCodeSignIdentityForPersion
+			matchCodeSignIdentity=$disCodeSignIdentityForPersion
 		fi
 	elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
 		if [[ "$channel" == 'debug' ]]; then
