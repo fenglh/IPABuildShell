@@ -103,6 +103,39 @@ function clean
 	done
 }
 
+##登录keychain授权
+function loginKeychainAccess
+{
+	
+	#允许访问证书
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
+	if [[ $? -ne 0 ]]; then
+		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+		exit 1
+	fi
+	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>/tmp/log.txt
+		if [[ $? -ne 0 ]]; then
+		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+		exit 1
+	fi
+}
+
+
+###检查输入的分发渠道
+function checkChannel
+{
+	OPTARG=$1
+	if [[ "$OPTARG" != "debug" ]] && [[ "$OPTARG" != "appstore" ]] && [[ "$OPTARG" != "enterprise" ]]; then
+		echo "-c 参数不能配置值：$OPTARG"
+		usage
+		exit 1
+	fi
+	channel=${OPTARG}
+
+}
+
+
+
 ##设置命令快捷方式
 function setAliasShortCut
 {
@@ -438,6 +471,18 @@ function setBuildVersion
 	
 }
 
+##配置证书身份和授权文件
+function configureSigningByRuby
+{
+	logit "========================配置Signing========================"
+	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
+	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
+	if [[ $? -ne 0 ]]; then
+		echo "xcocdeModify.rb 修改配置失败！！"
+		exit 1
+	fi
+	logit "========================配置完成========================"
+}
 
 
 ##设置生产环境或者开发环境
@@ -672,56 +717,6 @@ function renameAndBackup
 	
 }
 
-
-##配置证书身份和授权文件
-function configureSigningByRuby
-{
-	logit "========================配置Signing========================"
-	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
-
-
-	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
-
-	if [[ $? -ne 0 ]]; then
-		echo "xcocdeModify.rb 修改配置失败！！"
-		exit 1
-	fi
-	
-
-
-	logit "========================配置完成========================"
-}
-
-##登录keychain授权
-function loginKeychainAccess
-{
-	
-	#允许访问证书
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
-	if [[ $? -ne 0 ]]; then
-		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-		exit 1
-	fi
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>/tmp/log.txt
-		if [[ $? -ne 0 ]]; then
-		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-		exit 1
-	fi
-}
-
-
-###检查输入的分发渠道
-function checkChannel
-{
-	OPTARG=$1
-	if [[ "$OPTARG" != "debug" ]] && [[ "$OPTARG" != "appstore" ]] && [[ "$OPTARG" != "enterprise" ]]; then
-		echo "-c 参数不能配置值：$OPTARG"
-		usage
-		exit 1
-	fi
-	channel=${OPTARG}
-
-}
 
 
 
