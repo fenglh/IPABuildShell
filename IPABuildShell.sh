@@ -30,7 +30,7 @@
 #
 # 版本：2.1.1
 # 优化：
-#		profileType==debug时，设置ARCHS='arm64' ，否则archs为默认值：arm64 和armv7。节省一半时间!
+#		profileType==debug时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。节省一半时间!
 # 作者：
 #		fenglh	2016/03/06
 #
@@ -526,10 +526,10 @@ function build
 		cmd="$xcodebuild archive						 	-scheme $targetName -archivePath $archivePath -configuration $configuration build"
 	fi
 
-	# ##如果使用debug，那么都指定archs=arm64
-	# if [[ "$profileType" == "debug" ]]; then
-	# 	cmd="$cmd ARCHS='armv7'"
-	# fi
+	##如果使用debug，那么都指定archs=armv7 （向下兼容）
+	if [[ "$profileType" == "debug" ]]; then
+		cmd="$cmd ARCHS='armv7'"
+	fi
 
 	$cmd
 	if [[ $? -ne 0 ]]; then
