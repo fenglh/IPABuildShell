@@ -52,7 +52,7 @@
 ##个人账号：请把个人账号App的BundleId 配置在这里
 bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
 ##企业账号：请把企业账号App的BundleId 配置在这里
-bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse)
+bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse, cn.com.bluemoon.reportform)
 
 
 loginPwd='123456'
@@ -328,7 +328,7 @@ function autoMatchCodeSignIdentity
 			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
 		fi
 	else
-		echo "无法匹配【${appBundleId}】的应用的签名，请检查是否是个新的应用!"
+		echo "无法匹配【${appBundleId}】的应用的签名，请检查Bundle Id “${$appBundleId}”是否配置在脚本开头的配置列表中!"
 		exit 1
 	fi
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
