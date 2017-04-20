@@ -328,7 +328,7 @@ function autoMatchCodeSignIdentity
 			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
 		fi
 	else
-		echo "无法匹配$BundleId={appBundleId}的应用的签名，请检查是否是个新的应用!"
+		echo "无法匹配【{$appBundleId}】的应用的签名，请检查是否是个新的应用!"
 		exit 1
 	fi
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
@@ -360,6 +360,10 @@ function getAPPBundleId
 	##因为无论release 和 debug 配置中bundleId都是一致的，所以随便取一个即可
 	configurationId=${buildConfigurations[0]}
 	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	if [[ "$appBundleId"  == '']]; then
+		logit "获取APP Bundle Id 是失败!!!"
+		exit 1
+	fi
 	logit "appBundleId:$appBundleId"
 
 }
