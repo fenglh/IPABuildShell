@@ -360,7 +360,7 @@ function getAPPBundleId
 	##因为无论release 和 debug 配置中bundleId都是一致的，所以随便取一个即可
 	configurationId=${buildConfigurations[0]}
 	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	if [[ "$appBundleId"  == '']]; then
+	if [[ "$appBundleId" == '' ]]; then
 		logit "获取APP Bundle Id 是失败!!!"
 		exit 1
 	fi
