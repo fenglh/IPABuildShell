@@ -328,7 +328,7 @@ function autoMatchCodeSignIdentity
 			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
 		fi
 	else
-		echo "无法匹配【{$appBundleId}】的应用的签名，请检查是否是个新的应用!"
+		echo "无法匹配【${appBundleId}】的应用的签名，请检查是否是个新的应用!"
 		exit 1
 	fi
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
