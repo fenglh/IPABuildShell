@@ -85,6 +85,7 @@ channel='debug'
 verbose=true
 productionEnvironment=true
 debugConfiguration=false
+arch='armv7'
 declare -a targetNames
 environmentConfigureFileName="BMNetworkingConfiguration.h"
 
@@ -163,6 +164,7 @@ function usage
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
 	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
+	echo "	-r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等"
 	echo "  -h: 帮助."
 }
 
@@ -573,7 +575,7 @@ function build
 
 		##如果使用debug，那么都指定archs=armv7 （向下兼容）
 		if [[ "$profileType" == "debug" ]]; then
-			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS='armv7'
+			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS="$arch"
 		else
 			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
 		fi
@@ -581,7 +583,7 @@ function build
 	else
 		##如果使用debug，那么都指定archs=armv7 （向下兼容）
 		if [[ "$profileType" == "debug" ]]; then
-			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS='armv7'
+			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS="$arch"
 		else
 			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
 		fi
@@ -724,13 +726,14 @@ function renameAndBackup
 
 
 
-while getopts p:c:xvhgtl option; do
+while getopts p:c:r:xvhgtl option; do
   case "${option}" in
   	g) getGitVersionCount;exit;;
     p) xcodeProject=${OPTARG};;
 	c) checkChannel ${OPTARG};;
 	t) productionEnvironment=false;;
 	l) showUsableCodeSign;exit;;
+	r) arch=${OPTARG};;
     x) set -x;;
 	d) debugConfiguration=true;;
     v) verbose=true;;
