@@ -163,8 +163,8 @@ function usage
 	echo "  -x: 脚本执行调试模式."
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
-	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
 	echo "	-r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等"
+	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
 	echo "  -h: 帮助."
 }
 
@@ -575,17 +575,17 @@ function build
 
 		##如果使用debug，那么都指定archs=armv7 （向下兼容）
 		if [[ "$profileType" == "debug" ]]; then
-			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS="$arch"
+			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
 		else
-			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
+			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
 		fi
 		
 	else
 		##如果使用debug，那么都指定archs=armv7 （向下兼容）
 		if [[ "$profileType" == "debug" ]]; then
-			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build ARCHS="$arch"
+			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
 		else
-			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration build
+			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
 		fi
 
 
