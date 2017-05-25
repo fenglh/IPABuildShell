@@ -50,7 +50,7 @@
 #####################可配置项目#####################
 
 ##个人账号：请把个人账号App的BundleId 配置在这里
-bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash)
+bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash, cn.com.bluemoon.component)
 ##企业账号：请把企业账号App的BundleId 配置在这里
 bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse, cn.com.bluemoon.reportform)
 
