@@ -242,6 +242,7 @@ function checkEnvironmentConfigureFile
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
 		logit "环境配置文件${environmentConfigureFileName}不存在！"
+		exit 1
 	else
 		haveConfigureEnvironment=true;
 		logit "发现环境配置文件:${environmentConfigureFile}"
