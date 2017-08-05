@@ -30,11 +30,22 @@
 #
 # 版本：2.1.1
 # 优化：
-#		profileType==debug时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。节省一半时间!
+#		为了节省打包时间，在打开发环境的包时，只打armv7
+#		profileType==development 时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。
 # 作者：
 #		fenglh	2016/03/06
 #
+
 #
+# 版本：2.1.2
+# 优化：兼容xcode8.3以上版本
+# xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist 
+# Available options: app-store, ad-hoc, package, enterprise, development, and developer-id.
+# 当前用到：app-store ,ad-hoc, enterprise, development
+# 作者：
+#		fenglh	201708/05
+
+
 
 #--------------------------------------------
 	# 没有任何修饰符参数 : 原生参数
@@ -81,7 +92,7 @@ codesign="/usr/bin/codesign"
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
 ##默认分发渠道是内部测试
-channel='debug'
+channel='development'
 verbose=true
 productionEnvironment=true
 debugConfiguration=false
@@ -90,11 +101,17 @@ declare -a targetNames
 environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 
+##比较版本号大小：大于等于
+function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
+
 function clean
 {
 	for file in `ls $backupDir` ; do
 		echo "清除上一次打包的文件或者文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
+			if [[ ! -f "$backupDir/$file" ]]; then
+				continue;
+			fi
 			mv -f $backupDir/$file $backupHistoryDir
 			if [[ $? -ne 0 ]]; then
 				echo "删除失败!"
@@ -121,12 +138,34 @@ function loginKeychainAccess
 	fi
 }
 
+##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist 
+function generateOptionsPlist 
+{
+	teamId=$1
+	method=$2
+	plistfileContent="
+	<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n
+	<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n
+	<plist version=\"1.0\">\n
+	<dict>\n
+	<key>teamID</key>\n
+	<string>$teamId</string>\n
+	<key>method</key>\n
+	<string>$method</string>\n
+	<key>compileBitcode</key>\n
+	<false/>\n
+	</dict>\n
+	</plist>\n
+	"
+	echo -e $plistfileContent > /tmp/optionsplist.plist
+}
+
 
 ###检查输入的分发渠道
 function checkChannel
 {
 	OPTARG=$1
-	if [[ "$OPTARG" != "debug" ]] && [[ "$OPTARG" != "appstore" ]] && [[ "$OPTARG" != "enterprise" ]]; then
+	if [[ "$OPTARG" != "development" ]] && [[ "$OPTARG" != "app-store" ]] && [[ "$OPTARG" != "enterprise" ]]; then
 		echo "-c 参数不能配置值：$OPTARG"
 		usage
 		exit 1
@@ -164,7 +203,7 @@ function usage
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
 	echo "	-r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等"
-	echo "  -c <debug|appstore|enterprise>: 分发渠道：debug内部分发，appstore商店分发，enterprise企业分发"
+	echo "  -c <development|app-store|enterprise>: development 内部分发，app-store商店分发，enterprise企业分发"
 	echo "  -h: 帮助."
 }
 
@@ -241,8 +280,8 @@ function checkEnvironmentConfigureFile
 	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigureFileName" -print| head -n 1`
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
-		logit "环境配置文件${environmentConfigureFileName}不存在！"
-		exit 1
+		logit "环境配置文件${environmentConfigureFileName}不存在,忽略生产环境/开发环境配置"
+		# exit 1
 	else
 		haveConfigureEnvironment=true;
 		logit "发现环境配置文件:${environmentConfigureFile}"
@@ -319,13 +358,13 @@ function autoMatchCodeSignIdentity
 	
 	matchCodeSignIdentity=''
 	if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
-		if [[ "$channel" == 'debug' ]]; then
+		if [[ "$channel" == 'development' ]]; then
 			matchCodeSignIdentity=$devCodeSignIdentityForPersion
-		elif [[ "$channel" == 'appstore' ]]; then
+		elif [[ "$channel" == 'app-store' ]]; then
 			matchCodeSignIdentity=$disCodeSignIdentityForPersion
 		fi
 	elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
-		if [[ "$channel" == 'debug' ]]; then
+		if [[ "$channel" == 'development' ]]; then
 			matchCodeSignIdentity=$devCodeSignIdentityForEnterprise
 		elif [[ "$channel" == 'enterprise' ]]; then
 			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
@@ -433,9 +472,9 @@ function getProfileType
 	if [[ $? -eq 0 ]]; then
 		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" 2>/tmp/log.txt) `
 		if [[ $getTaskAllow == true ]]; then
-			profileType='debug'
+			profileType='development'
 		else
-			profileType='adhoc'
+			profileType='ad-hoc'
 		fi
 	else
 
@@ -445,10 +484,10 @@ function getProfileType
 			if [[ $provisionsAllDevices == true ]]; then
 				profileType='enterprise'
 			else
-				profileType='appstore'
+				profileType='app-store'
 			fi
 		else
-			profileType='appstore'
+			profileType='app-store'
 		fi
 	fi
 }
@@ -574,16 +613,16 @@ function build
 	
 	if [[ $isExistXcWorkspace == true ]]; then
 
-		##如果使用debug，那么都指定archs=armv7 （向下兼容）
-		if [[ "$profileType" == "debug" ]]; then
+		##如果使用development，那么都指定archs=armv7 （向下兼容）
+		if [[ "$profileType" == "development" ]]; then
 			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
 		else
 			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
 		fi
 		
 	else
-		##如果使用debug，那么都指定archs=armv7 （向下兼容）
-		if [[ "$profileType" == "debug" ]]; then
+		##如果使用development，那么都指定archs=armv7 （向下兼容）
+		if [[ "$profileType" == "development" ]]; then
 			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
 		else
 			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
@@ -599,16 +638,25 @@ function build
 		exit 1
 	fi
 
+	##获取当前xcodebuild版本
+	xcVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
+	logit "xcodebuild 当前版本:$xcVersion"
+	if versiongreatethen "$xcVersion" "8.3"; then
+		generateOptionsPlist "$profileTeamId" "$profileType"
+		##发现在xcode8.3 之后-exportPath 参数需要指定一个目录，而8.3之前参数指定是一个带文件名的路径！坑！
+		$xcodebuild -exportArchive -archivePath "$archivePath" -exportPath "$packageDir" -exportOptionsPlist /tmp/optionsplist.plist
+		
+	else
+		$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath" 
+	fi
 
-
-	##导出ipa
-	$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath" 
 	if [[ $? -eq 0 ]]; then
 		logit "打包成功,IPA生成路径：\"$exprotPath\""
 	else
-		logit "$xcodebuild -exportArchive -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\" 执行失败"
+		logit "$xcodebuild exportArchive  执行失败!"
 		exit 1
 	fi
+
 }
 
 ##在打企业包的时候：会报 archived-expanded-entitlements.xcent  文件缺失!这是xcode的bug
@@ -704,7 +752,7 @@ function renameAndBackup
 		environmentName='生产环境'
 	fi
 
-	if [[ "$profileType" == 'appstore' ]]; then
+	if [[ "$profileType" == 'app-store' ]]; then
 		profileTypeName='商店分发'
 	elif [[ "$profileType" == 'enterprise' ]]; then
 		profileTypeName='企业分发'
