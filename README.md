@@ -51,7 +51,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
   `[sudo] gem install xcodeproj`
 
-检查是否安装成功
+2. 检查是否安装成功
 
   ` xcodeproj --help`
 
@@ -74,7 +74,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
 2. 设置脚本快捷方式(可选)
 
-  - 打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
+  打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
 
   ```
   echo "alias IPABuildShell.sh=/脚本目录/IPABuildShell.sh" >> ~/.bash_profile
@@ -82,14 +82,14 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
   ```
 
-  - 检查是否配置成功
+  检查是否配置成功
 
   ```
   IPABuildShell.sh -h
   ```
 2. 构建ipa
 
-  - 打开终端，cd到工程目录执行下面命令开始构建你的ipa
+  打开终端，cd到工程目录执行下面命令开始构建你的ipa
 
   ```
   IPABuildShell.sh -c development
