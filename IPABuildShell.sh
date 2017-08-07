@@ -39,48 +39,12 @@
 #
 # 版本：2.1.2
 # 优化：兼容xcode8.3以上版本
-# xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist 
+# xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
 # Available options: app-store, ad-hoc, package, enterprise, development, and developer-id.
 # 当前用到：app-store ,ad-hoc, enterprise, development
 # 作者：
 #		fenglh	201708/05
 
-
-
-#--------------------------------------------
-	# 没有任何修饰符参数 : 原生参数
-	# <>  : 占位参数
-	# []  : 可选组合
-	# ()  : 必选组合
-	# |   : 互斥参数
-	# ... : 可重复指定前一个参数
-	# --  : 标记后续参数类型
-#--------------------------------------------
-
-
-#####################可配置项目#####################
-
-##个人账号：请把个人账号App的BundleId 配置在这里
-bundleIdsForPersion=(cn.com.bluemoon.bluehouse, cn.com.bluemoon.wash, cn.com.bluemoon.component, cn.com.bluemoon.onlineManagement)
-##企业账号：请把企业账号App的BundleId 配置在这里
-bundleIdsForEnterprise=(cn.com.bluemoon.oa, cn.com.bluemoon.sfa, cn.com.bluemoon.moonangel.inhouse, cn.com.bluemoon.reportform)
-
-
-loginPwd='123456'
-
-
-#####################################################
-
-##
-devCodeSignIdentityForPersion="iPhone Developer: chao li (4PD2B29433)"
-disCodeSignIdentityForPersion="iPhone Distribution: Blue Moon (China) Co., Ltd. (R6L6VZZQ6L)"
-
-devCodeSignIdentityForEnterprise="iPhone Developer: Li Chao (BTTHBUB23E)"
-disCodeSignIdentityForEnterprise="iPhone Distribution: Blue Moon ( China ) Co., Ltd."
-
-
-##环境变量，必须添加，在遇到有中文字符的xcode project时，会报错，貌似没用，暂时留在这里
-export LANG=zh_CN.UTF-8
 
 backupDir=~/Desktop/PackageLog
 backupHistoryDir=~/Desktop/PackageLog/history/
@@ -91,6 +55,7 @@ security="/usr/bin/security"
 codesign="/usr/bin/codesign"
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
+currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )"
 ##默认分发渠道是内部测试
 channel='development'
 verbose=true
@@ -103,7 +68,23 @@ environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 ##比较版本号大小：大于等于
 function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
+##初始化配置：bundle identifier 和 code signing identity
 
+function initConfiguration() {
+	configPlist=$currentShellDir/config.plist
+	if [ ! -f "$configPlist" ];then
+			logit "找不到配置文件：$configPlist"
+			exit 1;
+	fi
+
+	loginPwd=`$plistBuddy -c 'Print :LoginPwd' $configPlist`
+	devCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:devCodeSignIdentity' $configPlist`
+	disCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:disCodeSignIdentity' $configPlist`
+	devCodeSignIdentityForEnterprise=`$plistBuddy -c 'Print :Enterprise:devCodeSignIdentity' $configPlist`
+	disCodeSignIdentityForEnterprise=`$plistBuddy -c 'Print :Enterprise:disCodeSignIdentity' $configPlist`
+	bundleIdsForPersion=`$plistBuddy -c 'Print :Individual:bundleIdentifiers' $configPlist`
+	bundleIdsForEnterprise=`$plistBuddy -c 'Print :Enterprise:bundleIdentifiers' $configPlist`
+}
 function clean
 {
 	for file in `ls $backupDir` ; do
@@ -124,7 +105,7 @@ function clean
 ##登录keychain授权
 function loginKeychainAccess
 {
-	
+
 	#允许访问证书
 	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
 	if [[ $? -ne 0 ]]; then
@@ -138,8 +119,8 @@ function loginKeychainAccess
 	fi
 }
 
-##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist 
-function generateOptionsPlist 
+##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
+function generateOptionsPlist
 {
 	teamId=$1
 	method=$2
@@ -177,27 +158,27 @@ function checkChannel
 
 
 ##设置命令快捷方式
-function setAliasShortCut
-{
-	bashProfile=$HOME/.bash_profile
-	if [[ ! -f $bashProfile ]]; then
-		touch $bashProfile
-	fi
-	currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )/`basename "$0"`"
-
-	aliasString="alias gn=\"$currentShellDir -g\"" 
-	grep "$aliasString" $bashProfile 
-	if [[ $? -ne 0 ]]; then
-		echo $aliasString >> $bashProfile 
-	fi
-}
+# function setAliasShortCut
+# {
+# 	bashProfile=$HOME/.bash_profile
+# 	if [[ ! -f $bashProfile ]]; then
+# 		touch $bashProfile
+# 	fi
+# 	shellFilePath="$currentShellDir/`basename "$0"`"
+#
+# 	aliasString="alias gn=\"$shellFilePath -g\""
+# 	grep "$aliasString" $bashProfile
+# 	if [[ $? -ne 0 ]]; then
+# 		echo $aliasString >> $bashProfile
+# 	fi
+# }
 
 function usage
 {
-	setAliasShortCut
-
-	echo "  -p <Xcode Project File>: 指定Xcode project. 如果使用该参数，脚本会自动在当前目录查看Xcode Project 文件"
-	echo "  -g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source $bashProfile)"
+	# setAliasShortCut
+	echo ""
+	echo "  -p <Xcode Project File>: 指定Xcode project. 否则，脚本会在当前执行目录中查找Xcode Project 文件"
+	echo "  -g: 获取git版本数量，快捷命令:gn (请先在终端执行：source $bashProfile)"
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
 	echo "  -d: 设置debug模式，默认release模式."
@@ -246,7 +227,7 @@ function checkForProjectFile
 	fi
 
 	projectExtension=`basename "$xcodeProject" | cut -d'.' -f2`
-	if [[ "$projectExtension" != "xcodeproj" ]]; then	
+	if [[ "$projectExtension" != "xcodeproj" ]]; then
 		echo "Xcode project 应该带有.xcodeproj文件扩展，.${projectExtension}不是一个Xcode project扩展！"
 		exit 1
 	else
@@ -280,7 +261,7 @@ function checkEnvironmentConfigureFile
 	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigureFileName" -print| head -n 1`
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
-		logit "环境配置文件${environmentConfigureFileName}不存在,忽略生产环境/开发环境配置"
+		logit "环境配置文件${environmentConfigureFileName}不存在,忽略生产环境/配置"
 		# exit 1
 	else
 		haveConfigureEnvironment=true;
@@ -295,7 +276,7 @@ function getEnvirionment
 		currentEnvironmentValue=$environmentValue
 		logit "当前配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 	fi
-	
+
 
 }
 
@@ -355,7 +336,7 @@ function autoMatchProvisionFile
 
 function autoMatchCodeSignIdentity
 {
-	
+
 	matchCodeSignIdentity=''
 	if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
 		if [[ "$channel" == 'development' ]]; then
@@ -380,7 +361,7 @@ function autoMatchCodeSignIdentity
 function getFirstTargets
 {
 	rootObject=`$plistBuddy -c "Print :rootObject" "$projectFile"`
-	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'` 
+	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
 	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
 	targetId=${targets[0]}
@@ -435,7 +416,7 @@ function showBuildSetting
 		developmentTeam=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		iphoneosDeploymentTarget=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:IPHONEOS_DEPLOYMENT_TARGET" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`			
+		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		productBundleIdentifier=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		productName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_NAME" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		provisionProfileUuid=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -514,7 +495,7 @@ function setBuildVersion
 		exit 1
 	fi
 
-	
+
 }
 
 ##配置证书身份和授权文件
@@ -531,7 +512,7 @@ function configureSigningByRuby
 }
 
 
-##设置生产环境或者开发环境
+##设置生产环境或者
 function setEnvironment
 {
 
@@ -557,12 +538,12 @@ function setOnlyActiveArch
 {
 	for configurationId in ${buildConfigurations[@]}; do
 		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`			
+		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		if [[ "$onlyActiveArch" != "NO" ]]; then
 			$plistBuddy -c "Set :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH NO" "$projectFile"
 			logit "设置${configurationName}模式的ONLY_ACTIVE_ARCH:NO"
 		fi
-		
+
 	done
 }
 
@@ -610,7 +591,7 @@ function build
 		rm -rf "$exprotPath"
 	fi
 
-	
+
 	if [[ $isExistXcWorkspace == true ]]; then
 
 		##如果使用development，那么都指定archs=armv7 （向下兼容）
@@ -619,7 +600,7 @@ function build
 		else
 			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
 		fi
-		
+
 	else
 		##如果使用development，那么都指定archs=armv7 （向下兼容）
 		if [[ "$profileType" == "development" ]]; then
@@ -629,11 +610,11 @@ function build
 		fi
 
 
-		
+
 	fi
 
 	if [[ $? -ne 0 ]]; then
-		echo "构建失败！" 
+		echo "构建失败！"
 		rm -rf "${packageDir}"/*
 		exit 1
 	fi
@@ -645,9 +626,9 @@ function build
 		generateOptionsPlist "$profileTeamId" "$profileType"
 		##发现在xcode8.3 之后-exportPath 参数需要指定一个目录，而8.3之前参数指定是一个带文件名的路径！坑！
 		$xcodebuild -exportArchive -archivePath "$archivePath" -exportPath "$packageDir" -exportOptionsPlist /tmp/optionsplist.plist
-		
+
 	else
-		$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath" 
+		$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath"
 	fi
 
 	if [[ $? -eq 0 ]]; then
@@ -731,7 +712,7 @@ function checkIPA
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
 		getProfileType $mobileProvisionFile
-		logit "授权文件类型:$profileType"	
+		logit "授权文件类型:$profileType"
 
 	else
 		echo "解压失败！无法找到$app"
@@ -746,11 +727,16 @@ function renameAndBackup
 	if [[ ! -d backupHistoryDir ]]; then
 		mkdir -p $backupHistoryDir
 	fi
-	if [[ "$currentEnvironmentValue" == 'YES' ]]; then
-		environmentName='开发环境'
+	if [[ haveConfigureEnvironment == true ]]; then
+		if [[ "$currentEnvironmentValue" == 'YES' ]]; then
+			environmentName='开发环境'
+		else
+			environmentName='生产环境'
+		fi
 	else
-		environmentName='生产环境'
+		environmentName='未知环境'
 	fi
+
 
 	if [[ "$profileType" == 'app-store' ]]; then
 		profileTypeName='商店分发'
@@ -769,7 +755,7 @@ function renameAndBackup
 	mv "$exprotPath" "$packageDir"/$ipaName
 	cp -af "$packageDir"/$ipaName $backupDir/$ipaName
 	cp -af $tmpLogFile $backupDir/$textLogName
-	
+
 }
 
 
@@ -779,12 +765,12 @@ while getopts p:c:r:xvhgtl option; do
   case "${option}" in
   	g) getGitVersionCount;exit;;
     p) xcodeProject=${OPTARG};;
-	c) checkChannel ${OPTARG};;
-	t) productionEnvironment=false;;
-	l) showUsableCodeSign;exit;;
-	r) arch=${OPTARG};;
+		c) checkChannel ${OPTARG};;
+		t) productionEnvironment=false;;
+		l) showUsableCodeSign;exit;;
+		r) arch=${OPTARG};;
     x) set -x;;
-	d) debugConfiguration=true;;
+		d) debugConfiguration=true;;
     v) verbose=true;;
     h | help) usage; exit;;
 	* ) usage;exit;;
@@ -796,6 +782,7 @@ done
 startDateSeconds=`date +%s`
 
 clean
+initConfiguration
 loginKeychainAccess
 checkForProjectFile
 checkIsExistWorkplace
@@ -823,5 +810,3 @@ logit "构建时间：$((${endDateSeconds}-${startDateSeconds})) 秒"
 
 
 #所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
-
-
