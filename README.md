@@ -13,7 +13,7 @@ IPABuildShell
 fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
 -p <Xcode Project File>: 指定Xcode project. 如果使用该参数，脚本会自动在当前目录查看Xcode Project 文件
--g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source /Users/fenglihai/.bash_profile)
+-g: 获取当前项目git的版本数量
 -l: 列举可用的codeSign identity.
 -x: 脚本执行调试模式.
 -d: 设置debug模式，默认release模式.

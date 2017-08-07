@@ -178,7 +178,7 @@ function usage
 	# setAliasShortCut
 	echo ""
 	echo "  -p <Xcode Project File>: 指定Xcode project. 否则，脚本会在当前执行目录中查找Xcode Project 文件"
-	echo "  -g: 获取git版本数量，快捷命令:gn (请先在终端执行：source $bashProfile)"
+	echo "  -g: 获取当前项目git的版本数量
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
 	echo "  -d: 设置debug模式，默认release模式."
