@@ -94,3 +94,5 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
   ```
   IPABuildShell.sh -c development
   ```
+![  打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_2.png)
+![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
