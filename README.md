@@ -47,18 +47,18 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 安装
 ==
 
-1. 安装Xcodeproj
+1. ##### 安装Xcodeproj
 
   `[sudo] gem install xcodeproj`
 
-2. 检查是否安装成功
+2. ##### 检查是否安装成功
 
   ` xcodeproj --help`
 
 使用
 ==
 
-1. 配置config.plist文件
+1. ##### 配置config.plist文件
   - LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
   - Individual
     - devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
@@ -72,7 +72,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
   - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
 
-2. 设置脚本快捷方式(可选)
+2. ##### 设置脚本快捷方式(可选)
 
   打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
 
@@ -87,7 +87,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
   ```
   IPABuildShell.sh -h
   ```
-2. 构建ipa
+2. ##### 构建ipa
 
   打开终端，cd到工程目录执行下面命令开始构建你的ipa
 
