@@ -59,8 +59,8 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 ==
 
 1. 配置config.plist文件
-  * LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
-  * Individual
+  - LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
+  - Individual
     - devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
     - disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
     - bundleIdentifiers 填写你的个人开发者账号应用的**bundle identifier**
@@ -74,22 +74,23 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
 2. 设置脚本快捷方式(可选)
 
-打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
-```
-echo "alias IPABuildShell.sh=/脚本目录/IPABuildShell.sh" >> ~/.bash_profile
-source ~/.bash_profile
+  打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
 
-```
+  ```
+  echo "alias IPABuildShell.sh=/脚本目录/IPABuildShell.sh" >> ~/.bash_profile
+  source ~/.bash_profile
 
-检查是否配置成功
+  ```
 
-```
-IPABuildShell.sh -h
-```
+  检查是否配置成功
+
+  ```
+  IPABuildShell.sh -h
+  ```
 2. 构建ipa
 
-打开终端，cd到工程目录执行下面命令开始构建你的ipa
+  打开终端，cd到工程目录执行下面命令开始构建你的ipa
 
-```
-IPABuildShell.sh -c development
-```
+  ```
+  IPABuildShell.sh -c development
+  ```
