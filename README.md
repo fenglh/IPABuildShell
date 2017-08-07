@@ -59,18 +59,18 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 ==
 
 1. 配置config.plist文件
-- LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
-- Individual
-- devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
-- disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
-- bundleIdentifiers 填写你的个人开发者账号应用的**bundle identifier**
-- Enterprise
-- devCodeSignIdentity 填写你的企业开发者账号的**开发环境签名身份**
-- disCodeSignIdentity 填写你的企业开发者账号的**生产环境签名身份**
-- bundleIdentifiers 填写你的企业开发者账号应用的**bundle identifier**
+  * LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
+  * Individual
+    - devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
+    - disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
+    - bundleIdentifiers 填写你的个人开发者账号应用的**bundle identifier**
+  - Enterprise
+    - devCodeSignIdentity 填写你的企业开发者账号的**开发环境签名身份**
+    - disCodeSignIdentity 填写你的企业开发者账号的**生产环境签名身份**
+    - bundleIdentifiers 填写你的企业开发者账号应用的**bundle identifier**
 
 
-- ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
+  - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
 
 2. 设置脚本快捷方式(可选)
 
