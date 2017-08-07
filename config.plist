@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LoginPwd</key>
+	<string>123456</string>
+	<key>Individual</key>
+	<dict>
+		<key>devCodeSignIdentity</key>
+		<string>iPhone Developer: chao li (4PD2B29433)</string>
+		<key>disCodeSignIdentity</key>
+		<string>iPhone Distribution: Blue Moon (China) Co., Ltd. (R6L6VZZQ6L)</string>
+		<key>bundleIdentifiers</key>
+		<array>
+			<string>cn.com.bluemoon.onlineManagement</string>
+			<string>cn.com.bluemoon.component</string>
+			<string>cn.com.bluemoon.bluehouse</string>
+			<string>cn.com.bluemoon.wash</string>
+		</array>
+	</dict>
+	<key>Enterprise</key>
+	<dict>
+		<key>devCodeSignIdentity</key>
+		<string>iPhone Developer: Li Chao (BTTHBUB23E)</string>
+		<key>disCodeSignIdentity</key>
+		<string>iPhone Distribution: Blue Moon ( China ) Co., Ltd.</string>
+		<key>bundleIdentifiers</key>
+		<array>
+			<string>cn.com.bluemoon.moonangel.inhouse</string>
+			<string>cn.com.bluemoon.reportform</string>
+			<string>cn.com.bluemoon.oa</string>
+			<string>cn.com.bluemoon.sfa</string>
+		</array>
+	</dict>
+</dict>
+</plist>
