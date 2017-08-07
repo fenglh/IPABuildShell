@@ -1,19 +1,95 @@
-# IPABuildShell
-iOS脚本配置Xcode Project（打包）
+---
+layout: "post"
+title: "readme"
+date: "2017-08-06 22:19"
+---
+IPABuildShell
+==
+
+`IPABuildShell` 一个Xcode projects 快速打包工具，`IPABuildShell` 主要使用bash脚本语言编写，通过执行脚本并简单的配置参数就能实现自动配置证书、授权授权文件等并完成IPA生成。
 
 ```
-bluemoon007deiMac:~ itx$ /Users/itx/Desktop/build.sh -h
-  -p <Xcode Project File>: 指定Xcode project.
-  -f <Profile>: 指定授权文件.
-  -s <codeSign identify>: 指定签名，使用-l 参数列举可用签名.
-  -g: 获取git版本数量，并自动更改build号为版本数量号.
-  -l: 列举可用的codeSign identify.
-  -x: 脚本执行调试模式.
-  -d: 设置debug模式，默认release模式.
-  -t: 设置为测试(开发)环境，默认为生产环境.
-  -s: 显示有效的签名.
-  -h: 帮助.
-  -v: 输出详细信息.
+
+fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
+
+-p <Xcode Project File>: 指定Xcode project. 如果使用该参数，脚本会自动在当前目录查看Xcode Project 文件
+-g: 获取git版本数量，并自动更改build号为版本数量号，快捷命令:gn (请先在终端执行：source /Users/fenglihai/.bash_profile)
+-l: 列举可用的codeSign identity.
+-x: 脚本执行调试模式.
+-d: 设置debug模式，默认release模式.
+-t: 设置为测试(开发)环境，默认为生产环境.
+-r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等
+-c <development|app-store|enterprise>: development 内部分发，app-store商店分发，enterprise企业分发
+-h: 帮助.
+
 ```
 
-  详见博客：[iOS脚本配置Xcode Project（打包）](http://blog.csdn.net/chsadin/article/details/61192923 "iOS脚本配置Xcode Project（打包）")
+功能
+==
+- 支持Xcode 8.0至8.3.2(其他版本还没试过)
+- 支持ipa签名方式：development、app-store、enterprise，即内部分发、商店分发、企业分发
+- 自动匹配授权文件(Provisioning Profile)
+- 自动匹配签名身份(Code Signing Identity)
+- 兼容`单工程`和`多工程`(Workplace)项目
+- 只支持单个target
+- 自动修改内部版本号(Build)
+- 可配置（接口）生产环境和开发环境
+- 可指定debug、release模式
+- 可指定构建的Architcture(arm64、armv7)
+- 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_企商店_2.1.0(68).ipa`
+- 自动修复企业分发ipa的XcentFile文件
+- 自动校验ipa签名
+- 同时支持个人开发者账号和企业开发者账号
+- 日志输出以及备份每次打包的ipa以及日志
+
+
+
+安装
+==
+
+1. 安装Xcodeproj
+
+`[sudo] gem install xcodeproj`
+
+检查是否安装成功
+
+` xcodeproj --help`
+
+使用
+==
+
+1. 配置config.plist文件
+- LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
+- Individual
+- devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
+- disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
+- bundleIdentifiers 填写你的个人开发者账号应用的**bundle identifier**
+- Enterprise
+- devCodeSignIdentity 填写你的企业开发者账号的**开发环境签名身份**
+- disCodeSignIdentity 填写你的企业开发者账号的**生产环境签名身份**
+- bundleIdentifiers 填写你的企业开发者账号应用的**bundle identifier**
+
+
+- ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
+
+2. 设置脚本快捷方式(可选)
+
+打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
+```
+echo "alias IPABuildShell.sh=/脚本目录/IPABuildShell.sh" >> ~/.bash_profile
+source ~/.bash_profile
+
+```
+
+检查是否配置成功
+
+```
+IPABuildShell.sh -h
+```
+2. 构建ipa
+
+打开终端，cd到工程目录执行下面命令开始构建你的ipa
+
+```
+IPABuildShell.sh -c development
+```
