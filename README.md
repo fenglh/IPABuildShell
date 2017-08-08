@@ -6,7 +6,7 @@ date: "2017-08-06 22:19"
 IPABuildShell
 ==
 
-`IPABuildShell` 一个Xcode projects 快速打包工具，`IPABuildShell` 主要使用bash脚本语言编写，通过执行脚本并简单的配置参数就能实现自动配置证书、授权授权文件等并完成IPA生成。
+`IPABuildShell` 一个Xcode projects 快速打包工具，`IPABuildShell` 主要使用bash脚本语言编写，通过执行脚本并简单的配置参数就能实现自动配置证书、授权描述文件等并完成IPA生成。
 
 ```
 
@@ -28,7 +28,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 ==
 - 支持Xcode 8.0至8.3.2(其他版本还没试过)
 - 支持ipa签名方式：development、app-store、enterprise，即内部分发、商店分发、企业分发
-- 自动匹配授权文件(Provisioning Profile)
+- 自动匹配描述文件(Provisioning Profile)
 - 自动匹配签名身份(Code Signing Identity)
 - 兼容`单工程`和`多工程`(Workplace)项目
 - 只支持单个target
@@ -72,7 +72,22 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
   - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
 
-2. ##### 设置脚本快捷方式(可选)
+2. #### 添加描述文件
+
+  将描述文件拷贝添加到`MobileProvisionFile`目录。
+  脚本会根据工程的bundle identifier匹配到对应的授权文件并进行签名配置。
+
+3. ##### 构建ipa
+
+  打开终端，cd到工程目录执行下面命令开始构建你的ipa
+
+  ```
+  /脚本目录/IPABuildShell.sh -c development
+  ```
+![  打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_2.png)
+![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
+
+3. ##### 设置脚本快捷方式(可选)
 
   打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
 
@@ -87,12 +102,3 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
   ```
   IPABuildShell.sh -h
   ```
-2. ##### 构建ipa
-
-  打开终端，cd到工程目录执行下面命令开始构建你的ipa
-
-  ```
-  IPABuildShell.sh -c development
-  ```
-![  打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_2.png)
-![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
