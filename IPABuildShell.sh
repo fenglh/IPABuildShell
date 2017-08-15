@@ -63,7 +63,6 @@ productionEnvironment=true
 debugConfiguration=false
 arch='armv7'
 declare -a targetNames
-environmentConfigureFileName="BMNetworkingConfiguration.h"
 
 
 ##比较版本号大小：大于等于
@@ -77,6 +76,8 @@ function initConfiguration() {
 			exit 1;
 	fi
 
+	environmentConfigFileName=`$plistBuddy -c 'Print :InterfaceEnvironmentConfig:EnvironmentConfigFileName' $configPlist`
+	environmentConfigVariableName=`$plistBuddy -c 'Print :InterfaceEnvironmentConfig:EnvironmentConfigVariableName' $configPlist`
 	loginPwd=`$plistBuddy -c 'Print :LoginPwd' $configPlist`
 	devCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:devCodeSignIdentity' $configPlist`
 	disCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:disCodeSignIdentity' $configPlist`
@@ -88,7 +89,7 @@ function initConfiguration() {
 function clean
 {
 	for file in `ls $backupDir` ; do
-		echo "清除上一次打包的文件或者文件夹：$file"
+		logit "清除上一次打包的文件或者文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
 			if [[ ! -f "$backupDir/$file" ]]; then
 				continue;
@@ -258,23 +259,23 @@ function checkIsExistWorkplace
 ##检查配置文件
 function checkEnvironmentConfigureFile
 {
-	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigureFileName" -print| head -n 1`
+	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigFileName" -print| head -n 1`
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
-		logit "环境配置文件${environmentConfigureFileName}不存在,忽略生产环境/配置"
+		logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
 		# exit 1
 	else
 		haveConfigureEnvironment=true;
-		logit "发现环境配置文件:${environmentConfigureFile}"
+		logit "发现接口环境配置文件:${environmentConfigureFile}"
 	fi
 }
 
 function getEnvirionment
 {
 	if [[ $haveConfigureEnvironment == true ]]; then
-		environmentValue=$(grep "kBMIsTestEnvironment" "$environmentConfigureFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
+		environmentValue=$(grep "$environmentConfigVariableName" "$environmentConfigureFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
 		currentEnvironmentValue=$environmentValue
-		logit "当前配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+		logit "当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 	fi
 
 
@@ -396,7 +397,7 @@ function getAPPBundleId
 ##获取BuildSetting 配置
 function showBuildSetting
 {
-	logitVerbose "======================当前Build Setting 配置======================"
+	logitVerbose "======================查看当前Build Setting 配置======================"
 
 	targetId=${targets[0]}
 
@@ -407,7 +408,7 @@ function showBuildSetting
 	for configurationId in ${buildConfigurations[@]}; do
 
 		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		logitVerbose "配置类型: $configurationName"
+		logitVerbose "Target构建模式(Debug/release): $configurationName"
 		# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
 		# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -501,7 +502,7 @@ function setBuildVersion
 ##配置证书身份和授权文件
 function configureSigningByRuby
 {
-	logit "========================配置Signing========================"
+	logit "========================配置签名身份和描述文件========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
 	if [[ $? -ne 0 ]]; then
