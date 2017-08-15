@@ -110,7 +110,8 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ```
   IPABuildShell.sh -h
   ```
-##### 结合Jenkins神兵利器(略)
+结合Jenkins神兵利器(略)
+==
 
   配合Jenkins，通过在Jenkins中添加Shell的方式来完成IPA构建，那么可以实现真正的一键自动化打包。打包的事情就可以交给测试的同学自己去构建了......
 
@@ -118,3 +119,22 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ![ 打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_5.png)
 
   ![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_6.png)
+
+
+^_^
+==
+各位大佬，如果觉得对你有帮助，高抬贵手star一下呗！
+
+不愿意？
+
+您别走，
+
+听我说，
+
+我有三个理由：
+
+求求您了！
+
+求求您了！
+
+求求您了！
