@@ -59,7 +59,10 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 ==
 
 1. ##### 配置config.plist文件
-  - LoginPwd 填写系统运行用户**密码** (当keychains访问权限不足，则要用户密码解锁)
+  - LoginPwd 填写系统运行用户**密码** (可选，当keychains访问权限不足，则要用户密码解锁)
+  - InterfaceEnvironmantConfig (可选，注1)
+    - EnvironmentConfigFileName 填写你接口环境配置文件名
+    - EnvironmentconfigVariableName 填写你接口环境配置文件里面的变量名
   - Individual
     - devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
     - disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
@@ -71,6 +74,11 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 
 
   - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
+
+  注1:
+
+  在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!
+  ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
 
 2. #### 添加描述文件
 
