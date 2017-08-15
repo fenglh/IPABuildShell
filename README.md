@@ -10,7 +10,7 @@ IPABuildShell
 
 ```
 
-fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
+fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 -p <Xcode Project File>: 指定Xcode project. 如果使用该参数，脚本会自动在当前目录查看Xcode Project 文件
 -g: 获取当前项目git的版本数量
