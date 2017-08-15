@@ -59,7 +59,7 @@ fenglihaideMacBook-Pro: fenglihai$ IPABuild -h
 ==
 
 1. ##### 配置config.plist文件
-  - LoginPwd 填写系统运行用户**密码** (可选，当keychains访问权限不足，则要用户密码解锁)
+  - LoginPwd 填写系统用户**密码** (可选，当keychains访问权限不足，则要用户密码解锁)
   - InterfaceEnvironmantConfig (可选，注1)
     - EnvironmentConfigFileName 填写你接口环境配置文件名
     - EnvironmentconfigVariableName 填写你接口环境配置文件里面的变量名
