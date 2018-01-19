@@ -1,6 +1,6 @@
 #!/bin/bash
 #--------------------------------------------
-# 版本：2.0.0
+# 版本：1.0.0
 # 功能：
 #		1.显示Build Settings 签名配置
 #		2.获取git版本数量，并自动更改build号为版本数量号
@@ -19,7 +19,7 @@
 #		2.支持Xcode8.0及以上版本（8.0前没有测试过）
 #--------------------------------------------
 #
-# 版本：2.1.0
+# 版本：2.0.0
 # 优化：
 #		1.去掉可配置签名、授权文件，并修改为自动匹配签名和授权文件！
 # 作者：
@@ -28,7 +28,7 @@
 #
 #--------------------------------------------
 #
-# 版本：2.1.1
+# 版本：2.0.1
 # 优化：
 #		为了节省打包时间，在打开发环境的包时，只打armv7
 #		profileType==development 时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。
@@ -37,7 +37,7 @@
 #
 
 #
-# 版本：2.1.2
+# 版本：2.0.2
 # 优化：兼容xcode8.3以上版本
 # xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
 # Available options: app-store, ad-hoc, package, enterprise, development, and developer-id.
@@ -45,6 +45,11 @@
 # 作者：
 #		fenglh	201708/05
 
+# 版本：2.0.3
+# 优化：对授权文件mobiprovision有效期检测，授权文件有效期小于90天，强制打包失败！
+#
+#
+#
 
 backupDir=~/Desktop/PackageLog
 backupHistoryDir=~/Desktop/PackageLog/history/
@@ -69,11 +74,32 @@ declare -a targetNames
 function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
 ##初始化配置：bundle identifier 和 code signing identity
 
+function errorExit(){
+    echo -e "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    echo -e "+\t打包失败! 原因：$@"
+    echo -e "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+    exit 1
+}
+
+function logit() {
+    if [ $verbose == true ]; then
+        echo "	>> $@"
+    fi
+    echo "	>> $@" >> $tmpLogFile
+}
+
+function logitVerbose
+{
+    echo "	>> $@"
+    echo "	>> $@" >> $tmpLogFile
+}
+
+
+
 function initConfiguration() {
 	configPlist=$currentShellDir/config.plist
 	if [ ! -f "$configPlist" ];then
-			logit "找不到配置文件：$configPlist"
-			exit 1;
+			errorExit "找不到配置文件：$configPlist"
 	fi
 
 	environmentConfigFileName=`$plistBuddy -c 'Print :InterfaceEnvironmentConfig:EnvironmentConfigFileName' $configPlist`
@@ -96,8 +122,7 @@ function clean
 			fi
 			mv -f $backupDir/$file $backupHistoryDir
 			if [[ $? -ne 0 ]]; then
-				echo "删除失败!"
-				exit 1
+				errorExit "备份历史文件失败!"
 			fi
 		fi
 	done
@@ -110,13 +135,13 @@ function loginKeychainAccess
 	#允许访问证书
 	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
 	if [[ $? -ne 0 ]]; then
-		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-		exit 1
+		errorExit "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+
 	fi
 	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>/tmp/log.txt
 		if [[ $? -ne 0 ]]; then
-		echo "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-		exit 1
+		errorExit "security unlock-keychain 失败!请检查脚本配置密码是否正确"
+
 	fi
 }
 
@@ -204,18 +229,6 @@ function showUsableCodeSign
 	done
 }
 
-function logit() {
-  if [ $verbose == true ]; then
-  	echo "	>> $@"
-  fi
-  echo "	>> $@" >> $tmpLogFile
-}
-
-function logitVerbose
-{
-	echo "	>> $@"
-	echo "	>> $@" >> $tmpLogFile
-}
 
 ##检查xcode project
 function checkForProjectFile
@@ -229,13 +242,11 @@ function checkForProjectFile
 
 	projectExtension=`basename "$xcodeProject" | cut -d'.' -f2`
 	if [[ "$projectExtension" != "xcodeproj" ]]; then
-		echo "Xcode project 应该带有.xcodeproj文件扩展，.${projectExtension}不是一个Xcode project扩展！"
-		exit 1
+		errorExit "Xcode project 应该带有.xcodeproj文件扩展，.${projectExtension}不是一个Xcode project扩展！"
 	else
 		projectFile="$xcodeProject/project.pbxproj"
 		if [[ ! -f "$projectFile" ]]; then
-			echo "项目文件:\"$projectFile\" 不存在"
-			exit 1;
+			errorExit "项目文件:\"$projectFile\" 不存在"
 		fi
 		logit "发现pbxproj:\"$projectFile\""
 	fi
@@ -263,7 +274,6 @@ function checkEnvironmentConfigureFile
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
 		logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
-		# exit 1
 	else
 		haveConfigureEnvironment=true;
 		logit "发现接口环境配置文件:${environmentConfigureFile}"
@@ -291,13 +301,38 @@ function getGitVersionCount
 
 ##根据授权文件，自动匹配授权文件和签名身份
 
+
+
+##获取授权文件过期天数
+function getProvisionfileExpirationDays
+{
+    mobileProvisionFile=$1
+
+    ##切换到英文环境，不然无法转换成时间戳
+    export LANG="en_US.UTF-8"
+    ##获取授权文件的过期时间
+    profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
+
+    profileExpirationTimestamp=`date -j -f "%a %b %d %H:%M:%s %Z %Y" "$profileExpirationDate" "+%s"`
+    nowTimestamp=`date +%s`
+
+    ##因为不能return 负数，所以用0来代替
+    if [[ $profileExpirationTimestamp < $nowTimestamp ]];then
+        expirationDays=0
+    else
+        r=$[expirationTimestamp-nowTimestamp]
+        expirationDays=$[r/60/60/24]
+    fi
+
+    return $expirationDays
+}
+
 function autoMatchProvisionFile
 {
 	##授权文件默认放置在和脚本同一个目录下的MobileProvisionFile 文件夹中
 	mobileProvisionFileDir="$( cd "$( dirname "$0"  )" && pwd  )/MobileProvisionFile"
 	if [[ ! -d "$mobileProvisionFileDir" ]]; then
-		echo "授权文件目录${mobileProvisionFileDir}不存在！"
-		exit 1
+		errorExit "授权文件目录${mobileProvisionFileDir}不存在！"
 	fi
 
 	matchMobileProvisionFile=''
@@ -308,28 +343,40 @@ function autoMatchProvisionFile
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
 				matchMobileProvisionFile=$file
-				logit "匹配到${applicationIdentifier}的${channel}分发渠道的授权文件:$file"
+				logit "匹配到${applicationIdentifier}授权文件:$file"
+                logit "分发渠道：${channel}"
 				break
 			fi
 		fi
 	done
 
 	if [[ $matchMobileProvisionFile == '' ]]; then
-		echo "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
-		exit 1
+		errorExit "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
 	fi
+
+    ##企业分发，那么检查授权文件有效期
+    if [[ "$channel" == 'enterprise' ]];then
+        getProvisionfileExpirationDays $matchMobileProvisionFile
+        expirationDays=$?
+        ##因为function 不能返回负数，所以用0来代替
+        if [[ $expirationDays = 0 ]];then
+            profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
+            errorExit "授权文件已经过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate}"
+        elif [[ $expirationDays < 90 ]];then
+            errorExit "当前授权文件有效期不足90天，并将在 $expirationDays 天后过期!请联系开发人员更换授权文件!"
+        fi
+    fi
+
 
 	##获取授权文件uuid、name、teamId
 	profileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
 	profileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
 	profileTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
 	if [[ "$profileUuid" == '' ]]; then
-		echo "profileUuid=$profileUuid, 获取参数配置Profile的uuid失败!"
-		exit 1;
+		errorExit "profileUuid=$profileUuid, 获取参数配置Profile的uuid失败!"
 	fi
 	if [[ "$profileName" == '' ]]; then
-		echo "profileName=$profileName, 获取参数配置Profile的name失败!"
-		exit 1;
+		errorExit "profileName=$profileName, 获取参数配置Profile的name失败!"
 	fi
 	logit "发现授权文件参数配置:${profileName}, uuid：$profileUuid, teamId:$profileTeamId"
 
@@ -352,8 +399,7 @@ function autoMatchCodeSignIdentity
 			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
 		fi
 	else
-		echo "无法匹配【${appBundleId}】的应用的签名，请检查Bundle Id “${$appBundleId}”是否配置在脚本开头的配置列表中!"
-		exit 1
+		errorExit "无法匹配【${appBundleId}】的应用的签名，请检查Bundle Id “${$appBundleId}”是否配置在脚本开头的配置列表中!"
 	fi
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
 }
@@ -385,8 +431,7 @@ function getAPPBundleId
 	configurationId=${buildConfigurations[0]}
 	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	if [[ "$appBundleId" == '' ]]; then
-		logit "获取APP Bundle Id 是失败!!!"
-		exit 1
+		errorExit "获取APP Bundle Id 是失败!!!"
 	fi
 	logit "appBundleId:$appBundleId"
 
@@ -492,8 +537,7 @@ function setBuildVersion
 		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
 		logit "设置Buil Version:${gitVersionCount}"
 	else
-		echo "${infoPlistFilePath}文件不存在，无法修改"
-		exit 1
+		errorExit "${infoPlistFilePath}文件不存在，无法修改"
 	fi
 
 
@@ -506,8 +550,7 @@ function configureSigningByRuby
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
 	if [[ $? -ne 0 ]]; then
-		echo "xcocdeModify.rb 修改配置失败！！"
-		exit 1
+		errorExit "xcocdeModify.rb 修改配置失败！！"
 	fi
 	logit "========================配置完成========================"
 }
@@ -615,9 +658,9 @@ function build
 	fi
 
 	if [[ $? -ne 0 ]]; then
-		echo "构建失败！"
+
 		rm -rf "${packageDir}"/*
-		exit 1
+        errorExit "xcodebuild build 构建失败!"
 	fi
 
 	##获取当前xcodebuild版本
@@ -635,8 +678,7 @@ function build
 	if [[ $? -eq 0 ]]; then
 		logit "打包成功,IPA生成路径：\"$exprotPath\""
 	else
-		logit "$xcodebuild exportArchive  执行失败!"
-		exit 1
+		errorExit "$xcodebuild exportArchive  执行失败!"
 	fi
 
 }
@@ -658,8 +700,7 @@ function repairXcentFile
 		zip -qry  "$exprotPath" Payload >/dev/null 2>&1 && rm -rf Payload
 		cd -
 	else
-		echo "\"$xcentFile\" 文件不存在，修复Xcent文件失败!"
-		exit 1
+		errorExit "\"$xcentFile\" 文件不存在，修复Xcent文件失败!"
 	fi
 
 }
@@ -678,8 +719,7 @@ function checkIPA
 	app=/tmp/Payload/"${appName}".app
 	codesign --no-strict -v "$app"
 	if [[ $? -ne 0 ]]; then
-		echo "签名检查：签名校验不通过！"
-		exit 1;
+		errorExit "签名检查：签名校验不通过！"
 	fi
 	logit ""
 	logit "==============签名检查：签名校验通过！==============="
@@ -693,7 +733,10 @@ function checkIPA
 		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
 		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
 		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
+        #授权文件有效时间
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
+        getProvisionfileExpirationDays $mobileProvisionFile
+        expirationDays=$?
 		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
@@ -712,14 +755,16 @@ function checkIPA
 		logit "授权文件:${appMobileProvisionName}.mobileprovision"
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
+        logit "授权文件过期天数：$expirationDays 天"
 		getProfileType $mobileProvisionFile
 		logit "授权文件类型:$profileType"
 
 	else
-		echo "解压失败！无法找到$app"
-		exit 1
+		errorExit "解压失败！无法找到$app"
 	fi
 }
+
+
 
 ##重命名和备份
 function renameAndBackup
@@ -811,3 +856,4 @@ logit "构建时间：$((${endDateSeconds}-${startDateSeconds})) 秒"
 
 
 #所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
+a
