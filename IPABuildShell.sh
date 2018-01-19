@@ -356,7 +356,7 @@ function autoMatchProvisionFile
 
     ##企业分发，那么检查授权文件有效期
     if [[ "$channel" == 'enterprise' ]];then
-        getProvisionfileExpirationDays $matchMobileProvisionFile
+        getProvisionfileExpirationDays "$matchMobileProvisionFile"
         expirationDays=$?
         ##因为function 不能返回负数，所以用0来代替
         if [[ $expirationDays = 0 ]];then
@@ -735,7 +735,7 @@ function checkIPA
 		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
         #授权文件有效时间
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-        getProvisionfileExpirationDays $mobileProvisionFile
+        getProvisionfileExpirationDays "$mobileProvisionFile"
         expirationDays=$?
 		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
 		#支持最小的iOS版本
@@ -755,7 +755,7 @@ function checkIPA
 		logit "授权文件:${appMobileProvisionName}.mobileprovision"
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
-        logit "授权文件过期天数：$expirationDays 天"
+        logit "授权文件过期天数：${expirationDays} 天"
 		getProfileType $mobileProvisionFile
 		logit "授权文件类型:$profileType"
 
@@ -856,4 +856,3 @@ logit "构建时间：$((${endDateSeconds}-${startDateSeconds})) 秒"
 
 
 #所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
-a
