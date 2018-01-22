@@ -75,8 +75,10 @@ function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head
 ##初始化配置：bundle identifier 和 code signing identity
 
 function errorExit(){
+    endDateSeconds=`date +%s`
+    logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
     echo -e "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    echo -e "+\t打包失败! 原因：$@"
+    echo -e "\033[31m \t打包失败! 原因：$@ \033[0m"
     echo -e "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
     exit 1
 }
@@ -94,6 +96,19 @@ function logitVerbose
     echo "	>> $@" >> $tmpLogFile
 }
 
+
+function profileTypeToName
+{
+    profileType=$1
+    if [[ "$profileType" == 'app-store' ]]; then
+        profileTypeName='商店分发'
+    elif [[ "$profileType" == 'enterprise' ]]; then
+        profileTypeName='企业分发'
+    else
+        profileTypeName='内部测试'
+    fi
+
+}
 
 
 function initConfiguration() {
@@ -312,19 +327,10 @@ function getProvisionfileExpirationDays
     export LANG="en_US.UTF-8"
     ##获取授权文件的过期时间
     profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-
-    profileExpirationTimestamp=`date -j -f "%a %b %d %H:%M:%s %Z %Y" "$profileExpirationDate" "+%s"`
+    profileExpirationTimestamp=`date -j -f "%a %b %d  %T %Z %Y" "$profileExpirationDate" "+%s"`
     nowTimestamp=`date +%s`
-
-    ##因为不能return 负数，所以用0来代替
-    if [[ $profileExpirationTimestamp < $nowTimestamp ]];then
-        expirationDays=0
-    else
-        r=$[expirationTimestamp-nowTimestamp]
-        expirationDays=$[r/60/60/24]
-    fi
-
-    return $expirationDays
+    r=$[profileExpirationTimestamp-nowTimestamp]
+    expirationDays=$[r/60/60/24]
 }
 
 function autoMatchProvisionFile
@@ -343,27 +349,28 @@ function autoMatchProvisionFile
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
 				matchMobileProvisionFile=$file
-				logit "匹配到${applicationIdentifier}授权文件:$file"
-                logit "分发渠道：${channel}"
+				logit "授权文件匹配成功：${applicationIdentifier}，路径：$file"
+                profileTypeToName "${channel}"
+                logit "授权文件分发渠道：$profileTypeName"
 				break
 			fi
 		fi
 	done
 
 	if [[ $matchMobileProvisionFile == '' ]]; then
-		errorExit "无法匹配BundleId=${applicationIdentifier}的${channel}分发渠道的授权文件"
+        profileTypeToName "${channel}"
+		errorExit "无法匹配${applicationIdentifier} 分发渠道为【${profileTypeName}】的授权文件"
 	fi
 
     ##企业分发，那么检查授权文件有效期
     if [[ "$channel" == 'enterprise' ]];then
         getProvisionfileExpirationDays "$matchMobileProvisionFile"
-        expirationDays=$?
-        ##因为function 不能返回负数，所以用0来代替
-        if [[ $expirationDays = 0 ]];then
+        logit "授权文件有效时长：${expirationDays} 天";
+        if [[ $expirationDays -lt 0 ]];then
             profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
-            errorExit "授权文件已经过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate}"
-        elif [[ $expirationDays < 90 ]];then
-            errorExit "当前授权文件有效期不足90天，并将在 $expirationDays 天后过期!请联系开发人员更换授权文件!"
+            errorExit "授权文件已经过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate}, 过期天数：${expirationDays#-} 天"
+        elif [[ $expirationDays -le 90 ]];then
+            errorExit "授权文件即将过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate} ,剩余天数：${expirationDays} 天"
         fi
     fi
 
@@ -559,17 +566,17 @@ function configureSigningByRuby
 ##设置生产环境或者
 function setEnvironment
 {
-
 	if [[ $haveConfigureEnvironment == true ]]; then
 		bakExtension=".bak"
 		bakFile=${environmentConfigureFile}${bakExtension}
 		if [[ $productionEnvironment == true ]]; then
-			if [[ "$environmentValue" != "NO" ]]; then
+			if [[ "$currentEnvironmentValue" != "NO" ]]; then
 				sed -i "$bakExtension" "/kBMIsTestEnvironment/s/YES/NO/" "$environmentConfigureFile" && rm -rf $bakFile
 				logit "设置配置环境kBMIsTestEnvironment:NO"
 			fi
 		else
-			if [[ "$environmentValue" != "YES" ]]; then
+            echo "eeeeeeeeeeeeeeee2:$currentEnvironmentValue"
+			if [[ "$currentEnvironmentValue" != "YES" ]]; then
 				sed -i "$bakExtension" "/kBMIsTestEnvironment/s/NO/YES/" "$environmentConfigureFile" && rm -rf $bakFile
 				logit "设置配置环境kBMIsTestEnvironment:YES"
 			fi
@@ -736,7 +743,6 @@ function checkIPA
         #授权文件有效时间
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
         getProvisionfileExpirationDays "$mobileProvisionFile"
-        expirationDays=$?
 		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
@@ -755,9 +761,10 @@ function checkIPA
 		logit "授权文件:${appMobileProvisionName}.mobileprovision"
 		logit "授权文件创建时间:$appMobileProvisionCreationDate"
 		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
-        logit "授权文件过期天数：${expirationDays} 天"
-		getProfileType $mobileProvisionFile
-		logit "授权文件类型:$profileType"
+        logit "授权文件有效天数：${expirationDays} 天"
+		getProfileType "$mobileProvisionFile"
+        profileTypeToName "$profileType"
+		logit "分发渠道:$profileTypeName"
 
 	else
 		errorExit "解压失败！无法找到$app"
@@ -773,7 +780,8 @@ function renameAndBackup
 	if [[ ! -d backupHistoryDir ]]; then
 		mkdir -p $backupHistoryDir
 	fi
-	if [[ haveConfigureEnvironment == true ]]; then
+
+	if [[ $haveConfigureEnvironment == true ]]; then
 		if [[ "$currentEnvironmentValue" == 'YES' ]]; then
 			environmentName='开发环境'
 		else
@@ -783,14 +791,7 @@ function renameAndBackup
 		environmentName='未知环境'
 	fi
 
-
-	if [[ "$profileType" == 'app-store' ]]; then
-		profileTypeName='商店分发'
-	elif [[ "$profileType" == 'enterprise' ]]; then
-		profileTypeName='企业分发'
-	else
-		profileTypeName='内部测试'
-	fi
+    profileTypeToName "$profileType"
 
 	date=`date +"%Y%m%d_%H%M%S"`
 	name=${appShowingName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
@@ -805,6 +806,7 @@ function renameAndBackup
 }
 
 
+startDateSeconds=`date +%s`
 
 
 while getopts p:c:r:xvhgtl option; do
@@ -824,8 +826,6 @@ while getopts p:c:r:xvhgtl option; do
 done
 
 
-
-startDateSeconds=`date +%s`
 
 clean
 initConfiguration
@@ -852,7 +852,8 @@ checkIPA
 renameAndBackup
 
 endDateSeconds=`date +%s`
-logit "构建时间：$((${endDateSeconds}-${startDateSeconds})) 秒"
+
+logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
 
 
 #所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
