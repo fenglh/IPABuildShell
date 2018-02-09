@@ -575,7 +575,6 @@ function setEnvironment
 				logit "设置配置环境kBMIsTestEnvironment:NO"
 			fi
 		else
-            echo "eeeeeeeeeeeeeeee2:$currentEnvironmentValue"
 			if [[ "$currentEnvironmentValue" != "YES" ]]; then
 				sed -i "$bakExtension" "/kBMIsTestEnvironment/s/NO/YES/" "$environmentConfigureFile" && rm -rf $bakFile
 				logit "设置配置环境kBMIsTestEnvironment:YES"
