@@ -48,8 +48,12 @@
 # 版本：2.0.3
 # 优化：对授权文件mobiprovision有效期检测，授权文件有效期小于90天，强制打包失败！
 #
+
+# 版本：2.0.4
+# 优化：默认构建ipa支持armch 为 arm64。（因iOS 11强制禁用32位）
 #
 #
+
 
 backupDir=~/Desktop/PackageLog
 backupHistoryDir=~/Desktop/PackageLog/history/
@@ -66,7 +70,7 @@ channel='development'
 verbose=true
 productionEnvironment=true
 debugConfiguration=false
-arch='armv7'
+arch='arm64'
 declare -a targetNames
 
 
