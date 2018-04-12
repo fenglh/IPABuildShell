@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2017-08-06 22:19"
+date: "2018-04-12 16:39"
 ---
 IPABuildShell
 ==
@@ -16,6 +16,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 -g: 获取当前项目git的版本数量
 -l: 列举可用的codeSign identity.
 -x: 脚本执行调试模式.
+-b: 设置Bundle Id.
 -d: 设置debug模式，默认release模式.
 -t: 设置为测试(开发)环境，默认为生产环境.
 -r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等
@@ -34,6 +35,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 - 只支持单个target
 - 自动修改内部版本号(Build)
 - 可配置（接口）生产环境和开发环境
+- 可配置Bundle Id
 - 可指定debug、release模式
 - 可指定构建的Architcture(arm64、armv7)
 - 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_企商店_2.1.0(68).ipa`
