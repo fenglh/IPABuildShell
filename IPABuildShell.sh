@@ -1,4 +1,6 @@
 #!/bin/bash
+
+
 #--------------------------------------------
 # 版本：1.0.0
 # 功能：
@@ -54,6 +56,12 @@
 #
 #
 
+# 版本：2.0.5
+# 优化：
+# 1. 增加一个“修改Bundle Id”功能。如-b com.xxx.xx。
+# 2. 优化一些代码
+# 作者：
+#		fenglh	2018/04/12
 
 backupDir=~/Desktop/PackageLog
 backupHistoryDir=~/Desktop/PackageLog/history/
@@ -226,6 +234,7 @@ function usage
 	echo "  -g: 获取当前项目git的版本数量"
 	echo "  -l: 列举可用的codeSign identity."
 	echo "  -x: 脚本执行调试模式."
+  echo "  -b: 设置Bundle Id."
 	echo "  -d: 设置debug模式，默认release模式."
 	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
 	echo "	-r <体系结构>,例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等"
@@ -363,7 +372,7 @@ function autoMatchProvisionFile
 
 	if [[ $matchMobileProvisionFile == '' ]]; then
         profileTypeToName "${channel}"
-		errorExit "无法匹配${applicationIdentifier} 分发渠道为【${profileTypeName}】的授权文件"
+		errorExit "无法匹配${appBundleId} 分发渠道为【${profileTypeName}】的授权文件"
 	fi
 
     ##企业分发，那么检查授权文件有效期
@@ -431,14 +440,16 @@ function getFirstTargets
 
 }
 
+#### 即release和debug 模式对应的id
+function getTargetConfigurationsIds() {
+  buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
+  buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+  ##数组中存放的分别是release和debug对应的id
+  buildConfigurations=(`echo $buildConfigurationList`)
+}
 
 function getAPPBundleId
 {
-	targetId=${targets[0]}
-	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
-	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	buildConfigurations=(`echo $buildConfigurationList`)
-	##因为无论release 和 debug 配置中bundleId都是一致的，所以随便取一个即可
 	configurationId=${buildConfigurations[0]}
 	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 	if [[ "$appBundleId" == '' ]]; then
@@ -455,12 +466,7 @@ function showBuildSetting
 {
 	logitVerbose "======================查看当前Build Setting 配置======================"
 
-	targetId=${targets[0]}
 
-	buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
-	logitVerbose "配置targetId：$buildConfigurationListId"
-	buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	buildConfigurations=(`echo $buildConfigurationList`)
 	for configurationId in ${buildConfigurations[@]}; do
 
 		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
@@ -530,19 +536,28 @@ function getProfileType
 	fi
 }
 
+function setBundleId() {
+  if [[ "$newBundleId" != '' ]] && [[ "$newBundleId" != "$appBundleId" ]]; then
+    for configurationId in ${buildConfigurations[@]}; do
+      $plistBuddy -c "Set :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $newBundleId" "$projectFile"
+      if [[ $? -eq 0 ]]; then
+        appBundleId=$newBundleId;
+        logit "设置Bundle Id:$newBundleId"
+      else
+        errorExit "无法设置Bundle Id为:$newBundleId。"
+      fi
+    done
+  fi
+}
+
 ##设置build version
 function setBuildVersion
 {
 
-	for targetId in ${targets[@]}; do
-		buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
-		buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		buildConfigurations=(`echo $buildConfigurationList`)
-		for configurationId in ${buildConfigurations[@]}; do
-			infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		done
-	done
-
+  ### 因为通常情况下一个项目无论是在release或者debug环境下，Info.plist文件默认都是同一个文件。所以这里直接在buildConfigurations[0]下面的配置中获取Info.plist 文件的路径。
+  configurationId=${buildConfigurations[0]}
+  infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+  ### 完整路径
 	infoPlistFilePath="$xcodeProject"/../$infoPlistFile
 	if [[ -f "$infoPlistFilePath" ]]; then
 		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
@@ -563,7 +578,6 @@ function configureSigningByRuby
 	if [[ $? -ne 0 ]]; then
 		errorExit "xcocdeModify.rb 修改配置失败！！"
 	fi
-	logit "========================配置完成========================"
 }
 
 
@@ -734,13 +748,13 @@ function checkIPA
 	logit ""
 	logit "==============签名检查：签名校验通过！==============="
 	if [[ -d "$app" ]]; then
-		infoPlistFile=${app}/Info.plist
+		ipaInfoPlistFile=${app}/Info.plist
 		mobileProvisionFile=${app}/embedded.mobileprovision
 
-		appShowingName=`$plistBuddy -c "Print :CFBundleName" $infoPlistFile`
-		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$infoPlistFile"`
-		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $infoPlistFile`
-		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $infoPlistFile`
+		appShowingName=`$plistBuddy -c "Print :CFBundleName" $ipaInfoPlistFile`
+		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$ipaInfoPlistFile"`
+		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $ipaInfoPlistFile`
+		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $ipaInfoPlistFile`
 		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
 		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
         #授权文件有效时间
@@ -748,7 +762,7 @@ function checkIPA
         getProvisionfileExpirationDays "$mobileProvisionFile"
 		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
 		#支持最小的iOS版本
-		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$infoPlistFile"`
+		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile"`
 		#支持的arch
 		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
 
@@ -812,8 +826,9 @@ function renameAndBackup
 startDateSeconds=`date +%s`
 
 
-while getopts p:c:r:xvhgtl option; do
+while getopts p:c:r:b:xvhgtl option; do
   case "${option}" in
+    b) newBundleId=${OPTARG};;
   	g) getGitVersionCount;exit;;
     p) xcodeProject=${OPTARG};;
 		c) checkChannel ${OPTARG};;
@@ -839,7 +854,10 @@ checkEnvironmentConfigureFile
 
 getEnvirionment
 getFirstTargets
+
+getTargetConfigurationsIds
 getAPPBundleId
+setBundleId
 autoMatchProvisionFile
 autoMatchCodeSignIdentity
 getGitVersionCount
@@ -857,6 +875,3 @@ renameAndBackup
 endDateSeconds=`date +%s`
 
 logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
-
-
-#所有的Set方法，目前都被屏蔽掉。因为当使用PlistBuddy修改工程配置时，会导致工程对中文解析出错！！！
