@@ -38,7 +38,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 - 可配置Bundle Id
 - 可指定debug、release模式
 - 可指定构建的Architcture(arm64、armv7)
-- 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_企商店_2.1.0(68).ipa`
+- 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_商店分发_2.1.0(68).ipa`
 - 自动修复企业分发ipa的XcentFile文件
 - 自动校验ipa签名
 - 同时支持个人开发者账号和企业开发者账号
