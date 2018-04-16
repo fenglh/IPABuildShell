@@ -38,13 +38,18 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 - 可配置Bundle Id
 - 可指定debug、release模式
 - 可指定构建的Architcture(arm64、armv7)
-- 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_商店分发_2.1.0(68).ipa`
+- 自动格式化IPA名称，例如: `MyApp_20170321_222303_开发环境_企业分发_2.1.0(67).ipa`、`MyApp_20170321_222403_生产环境_商店分发_2.1.0(68).ipa` (注1)
 - 自动修复企业分发ipa的XcentFile文件
 - 自动校验ipa签名
 - 同时支持个人开发者账号和企业开发者账号
 - 日志输出以及备份每次打包的ipa以及日志
 
 
+注1：
+ IPA分发途径，支持常用的3种： 
+    内部测试：用于给我们内部人员测试使用的，用户通过使用“同步助手”、“APP助手”等工具安装 
+    商店分发：用于提交到商店审核，用户通过在App Store下载安装 
+    企业分发：用户部署到服务器，用户通过扫描二维码或使用浏览器点击链接下载安装 
 
 安装
 ==
@@ -62,7 +67,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 1. ##### 配置config.plist文件
   - LoginPwd 填写系统用户**密码** (可选，当keychains访问权限不足，则要用户密码解锁)
-  - InterfaceEnvironmantConfig (可选，注1)
+  - InterfaceEnvironmantConfig (可选，注2)
     - EnvironmentConfigFileName 填写你接口环境配置文件名
     - EnvironmentconfigVariableName 填写你接口环境配置文件里面的变量名
   - Individual
@@ -77,19 +82,15 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
   - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
 
-  注1:
+  注2:
 
-  在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!
-  ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
+  在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!如果
+  你的项目配置生产和开发环境方式和这里不同，请忽略该配置。![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
   
-  如：脚本不带上`-t`参数，那么脚本会自动修改`BMNetworkingConfiguration.m`文件的`kBMIsTestEnvironment`变量名的值为`NO`。
+默认情况下脚本打包是生产环境，也就是不带`-t`参数。
 
 
-  IPA分发途径，包含3种： 
-    内部测试：用于给我们内部人员测试使用的，用户通过使用“同步助手”、“APP助手”等工具安装 
-    商店分发：用于提交到商店审核，用户通过在App Store下载安装 
-    企业分发：用户部署到服务器，用户通过扫描二维码或使用浏览器点击链接下载安装 
-
+ 
 2. #### 添加描述文件
 
   将描述文件拷贝添加到`MobileProvisionFile`目录。
