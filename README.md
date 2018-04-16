@@ -82,7 +82,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!
   ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
   
-  如：如果带上`-t`参数，那么脚本会自动修改`BMNetworkingConfiguration.m`文件的`kBMIsTestEnvironment`变量名的值为`NO`。
+  如：脚本不带上`-t`参数，那么脚本会自动修改`BMNetworkingConfiguration.m`文件的`kBMIsTestEnvironment`变量名的值为`NO`。
 
 
   IPA分发途径，包含3种： 
