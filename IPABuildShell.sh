@@ -660,44 +660,50 @@ function build
 	fi
 
 
+	##组装xcodebuild 构建需要的参数
+	cmd="$xcodebuild archive"
 	if [[ $isExistXcWorkspace == true ]]; then
+		cmd="$cmd"" -workspace \"$xcworkspace\""
+	fi
+	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $configuration clean build"
 
-		##如果使用development，那么都指定archs=armv7 （向下兼容）
-		if [[ "$profileType" == "development" ]]; then
-			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
-		else
-			$xcodebuild archive -workspace "$xcworkspace" -scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
-		fi
-
-	else
-		##如果使用development，那么都指定archs=armv7 （向下兼容）
-		if [[ "$profileType" == "development" ]]; then
-			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build ARCHS="$arch"
-		else
-			$xcodebuild archive	-scheme "$targetName" -archivePath "$archivePath" -configuration $configuration clean build
-		fi
-
-
-
+	if [[ "$profileType" == "development" ]]; then
+		cmd="$cmd"" ARCHS=\"$arch\""
 	fi
 
-	if [[ $? -ne 0 ]]; then
+	##判断是否安装xcpretty
+	if which xcpretty  >/dev/null 2>&1 ;then
+		cmd="$cmd"" | xcpretty"
+	fi
+	eval "$cmd"
 
+	if [[ $? -ne 0 ]]; then
 		rm -rf "${packageDir}"/*
-        errorExit "xcodebuild build 构建失败!"
+        errorExit "构建失败! 失败执行命令：$cmd"
 	fi
 
 	##获取当前xcodebuild版本
 	xcVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
 	logit "xcodebuild 当前版本:$xcVersion"
+
+
+	cmd="$xcodebuild -exportArchive"
 	if versiongreatethen "$xcVersion" "8.3"; then
+		logit "当前版本:$xcVersion"">8.3"
 		generateOptionsPlist "$profileTeamId" "$profileType"
 		##发现在xcode8.3 之后-exportPath 参数需要指定一个目录，而8.3之前参数指定是一个带文件名的路径！坑！
-		$xcodebuild -exportArchive -archivePath "$archivePath" -exportPath "$packageDir" -exportOptionsPlist /tmp/optionsplist.plist
+		 cmd="$cmd"" -archivePath \"$archivePath\" -exportPath \"$packageDir\" -exportOptionsPlist /tmp/optionsplist.plist" 
 
 	else
-		$xcodebuild -exportArchive -exportFormat IPA -archivePath "$archivePath" -exportPath "$exprotPath"
+		logit "当前版本:$xcVersion""<8.3"
+		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\""
 	fi
+	##判断是否安装xcpretty
+	if which xcpretty  >/dev/null 2>&1 ;then
+		cmd="$cmd"" | xcpretty"
+	fi
+	eval "$cmd"
+
 
 	if [[ $? -eq 0 ]]; then
 		logit "打包成功,IPA生成路径：\"$exprotPath\""

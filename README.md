@@ -48,10 +48,10 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 注1：
 
  IPA分发途径，支持常用的3种：
- 
-    - 内部测试：用于给我们内部人员测试使用的，用户通过使用“同步助手”、“APP助手”等工具安装 
-    - 商店分发：用于提交到商店审核，用户通过在App Store下载安装 
-    - 企业分发：用户部署到服务器，用户通过扫描二维码或使用浏览器点击链接下载安装 
+
+    - 内部测试：用于给我们内部人员测试使用的，用户通过使用“同步助手”、“APP助手”等工具安装
+    - 商店分发：用于提交到商店审核，用户通过在App Store下载安装
+    - 企业分发：用户部署到服务器，用户通过扫描二维码或使用浏览器点击链接下载安装
 
 安装
 ==
@@ -63,7 +63,10 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 2. ##### 检查是否安装成功
 
   ` xcodeproj --help`
-
+3. ##### 安装xcpretty
+  `gem install xcpretty`
+  
+  可选，用来格式化xcodebuild输出日志。
 使用
 ==
 
@@ -88,11 +91,11 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
   在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!如果
   你的项目配置生产和开发环境方式和这里不同，请忽略该配置。![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
-  
+
 默认情况下脚本打包是生产环境，也就是不带`-t`参数。
 
 
- 
+
 2. #### 添加描述文件
 
   将描述文件拷贝添加到`MobileProvisionFile`目录。
