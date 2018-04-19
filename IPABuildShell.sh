@@ -782,12 +782,10 @@ function checkIPA
 	if [[ $? -ne 0 ]]; then
 		errorExit "签名检查：签名校验不通过！"
 	fi
-	logit ""
 	logit "==============签名检查：签名校验通过！==============="
 	if [[ -d "$app" ]]; then
 		ipaInfoPlistFile=${app}/Info.plist
 		mobileProvisionFile=${app}/embedded.mobileprovision
-
 		appShowingName=`$plistBuddy -c "Print :CFBundleName" $ipaInfoPlistFile`
 		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$ipaInfoPlistFile"`
 		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $ipaInfoPlistFile`
@@ -797,12 +795,11 @@ function checkIPA
         #授权文件有效时间
 		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
         getProvisionfileExpirationDays "$mobileProvisionFile"
-		appCodeSignIdenfifier=`$codesign --display -r- "$app" | cut -d "\"" -f 4`
+		appCodeSignIdenfifier=`codesign -dvvv "$app" 2>/tmp/log.txt &&  grep Authority /tmp/log.txt | head -n 1 | cut -d "=" -f2`
 		#支持最小的iOS版本
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile"`
 		#支持的arch
 		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
-
 		logit "名字:$appShowingName"
 		getEnvirionment
 		logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
