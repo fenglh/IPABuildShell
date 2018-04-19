@@ -682,7 +682,14 @@ function build
 	if which xcpretty  >/dev/null 2>&1 ;then
 		cmd="$cmd"" | xcpretty -c "
 	fi
-	eval "$cmd" && rm -rf "${packageDir}"/* && errorExit "构建失败! 失败执行命令：$cmd"
+	##set -o pipefail 为了获取到管道前一个命令xcodebuild的执行结果，否则$?一直都会是0
+	eval "set -o pipefail && $cmd" 
+
+	if [[ $? -ne 0 ]]; then
+		rm -rf "${packageDir}"/*
+		errorExit "命令：${cmd} 执行失败!"
+	fi
+
 
 
 	##获取当前xcodebuild版本
@@ -705,7 +712,11 @@ function build
 	if which xcpretty  >/dev/null 2>&1 ;then
 		cmd="$cmd"" | xcpretty -c"
 	fi
-	eval "$cmd" && errorExit "$xcodebuild exportArchive  执行失败!"
+	eval "set -o pipefail && $cmd" 
+
+	if [[ $? -ne 0 ]]; then
+		errorExit "$xcodebuild exportArchive  执行失败!"
+	fi
 
 	logit "打包成功,IPA生成路径：\"$exprotPath\""
 
