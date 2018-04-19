@@ -63,6 +63,11 @@
 # 作者：
 #		fenglh	2018/04/12
 
+# 版本：2.0.5
+# 1. 优化build函数代码。
+# 2. 增加xcpretty 来格式化日志输出
+#		fenglh	2018/04/19
+
 backupDir=~/Desktop/PackageLog
 backupHistoryDir=~/Desktop/PackageLog/history/
 tmpLogFile=/tmp/`date +"%Y%m%d%H%M%S"`.txt
@@ -70,6 +75,7 @@ plistBuddy="/usr/libexec/PlistBuddy"
 xcodebuild="/usr/bin/xcodebuild"
 security="/usr/bin/security"
 codesign="/usr/bin/codesign"
+
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
 currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )"
