@@ -63,7 +63,7 @@
 # 作者：
 #		fenglh	2018/04/12
 
-# 版本：2.0.5
+# 版本：2.0.6
 # 1. 优化build函数代码。
 # 2. 增加xcpretty 来格式化日志输出
 #		fenglh	2018/04/19
@@ -95,22 +95,23 @@ function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head
 function errorExit(){
     endDateSeconds=`date +%s`
     logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
-    echo -e "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    echo -e "\033[31m \n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m"
     echo -e "\033[31m \t打包失败! 原因：$@ \033[0m"
-    echo -e "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+    echo -e "\033[31m \n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m"
     exit 1
 }
 
 function logit() {
     if [ $verbose == true ]; then
-        echo "	>> $@"
+        echo -e "\033[32m [IPABuildShell] \033[0m $@"
     fi
     echo "	>> $@" >> $tmpLogFile
 }
 
 function logitVerbose
 {
-    echo "	>> $@"
+    echo -e "\033[36m $@ \033[0m"
+
     echo "	>> $@" >> $tmpLogFile
 }
 
@@ -206,7 +207,7 @@ function checkChannel
 {
 	OPTARG=$1
 	if [[ "$OPTARG" != "development" ]] && [[ "$OPTARG" != "app-store" ]] && [[ "$OPTARG" != "enterprise" ]]; then
-		echo "-c 参数不能配置值：$OPTARG"
+		logit "-c 参数不能配置值：$OPTARG"
 		usage
 		exit 1
 	fi
@@ -259,7 +260,7 @@ function showUsableCodeSign
 	done
 	#打印签名
 	for (( i = 0; i < ${#usableCodeSignList[@]}; i++ )); do
-		echo "${usableCodeSignList[$i]}"
+		logit "${usableCodeSignList[$i]}"
 	done
 }
 
@@ -476,7 +477,7 @@ function showBuildSetting
 	for configurationId in ${buildConfigurations[@]}; do
 
 		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		logitVerbose "Target构建模式(Debug/release): $configurationName"
+		logit "Target构建模式(Debug/release): $configurationName"
 		# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
 		# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -494,16 +495,16 @@ function showBuildSetting
 		# logit "codeSignEntitlements:$codeSignEntitlements"
 		# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
 
-		logitVerbose "developmentTeam:$developmentTeam"
-		logitVerbose "infoPlistFile:$infoPlistFile"
-		logitVerbose "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
-		logitVerbose "onlyActiveArch:$onlyActiveArch"
-		logitVerbose "BundleId:$productBundleIdentifier"
-		logitVerbose "productName:$productName"
-		logitVerbose "provisionProfileUuid:$provisionProfileUuid"
-		logitVerbose "provisionProfileName:$provisionProfileName"
-		logitVerbose "codeSignIdentity:$codeSignIdentity"
-		logitVerbose "codeSignIdentitySDK:$codeSignIdentitySDK"
+		logit "developmentTeam:$developmentTeam"
+		logit "infoPlistFile:$infoPlistFile"
+		logit "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
+		logit "onlyActiveArch:$onlyActiveArch"
+		logit "BundleId:$productBundleIdentifier"
+		logit "productName:$productName"
+		logit "provisionProfileUuid:$provisionProfileUuid"
+		logit "provisionProfileName:$provisionProfileName"
+		logit "codeSignIdentity:$codeSignIdentity"
+		logit "codeSignIdentitySDK:$codeSignIdentitySDK"
 	done
 }
 
@@ -578,7 +579,7 @@ function setBuildVersion
 ##配置证书身份和授权文件
 function configureSigningByRuby
 {
-	logit "========================配置签名身份和描述文件========================"
+	logitVerbose "========================配置签名身份和描述文件========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
 	ruby ${rbDir}/xcocdeModify.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
 	if [[ $? -ne 0 ]]; then
@@ -679,7 +680,7 @@ function build
 
 	##判断是否安装xcpretty
 	if which xcpretty  >/dev/null 2>&1 ;then
-		cmd="$cmd"" | xcpretty"
+		cmd="$cmd"" | xcpretty -c "
 	fi
 	eval "$cmd"
 
@@ -706,7 +707,7 @@ function build
 	fi
 	##判断是否安装xcpretty
 	if which xcpretty  >/dev/null 2>&1 ;then
-		cmd="$cmd"" | xcpretty"
+		cmd="$cmd"" | xcpretty -c"
 	fi
 	eval "$cmd"
 
