@@ -63,7 +63,7 @@
 # 作者：
 #		fenglh	2018/04/12
 
-# 版本：2.0.6
+# 版本：2.0.5
 # 1. 优化build函数代码。
 # 2. 增加xcpretty 来格式化日志输出
 #		fenglh	2018/04/19
@@ -682,12 +682,8 @@ function build
 	if which xcpretty  >/dev/null 2>&1 ;then
 		cmd="$cmd"" | xcpretty -c "
 	fi
-	eval "$cmd"
+	eval "$cmd" && rm -rf "${packageDir}"/* && errorExit "构建失败! 失败执行命令：$cmd"
 
-	if [[ $? -ne 0 ]]; then
-		rm -rf "${packageDir}"/*
-        errorExit "构建失败! 失败执行命令：$cmd"
-	fi
 
 	##获取当前xcodebuild版本
 	xcVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
@@ -709,14 +705,10 @@ function build
 	if which xcpretty  >/dev/null 2>&1 ;then
 		cmd="$cmd"" | xcpretty -c"
 	fi
-	eval "$cmd"
+	eval "$cmd" && errorExit "$xcodebuild exportArchive  执行失败!"
 
+	logit "打包成功,IPA生成路径：\"$exprotPath\""
 
-	if [[ $? -eq 0 ]]; then
-		logit "打包成功,IPA生成路径：\"$exprotPath\""
-	else
-		errorExit "$xcodebuild exportArchive  执行失败!"
-	fi
 
 }
 
