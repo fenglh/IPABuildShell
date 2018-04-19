@@ -88,8 +88,10 @@ arch='arm64'
 declare -a targetNames
 
 
-##比较版本号大小：大于等于
-function versiongreatethen() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
+
+##大于等于
+function versionCompareGE() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
+
 ##初始化配置：bundle identifier 和 code signing identity
 
 function errorExit(){
@@ -184,6 +186,8 @@ function generateOptionsPlist
 {
 	teamId=$1
 	method=$2
+	appBundleId=$3
+	profileName=$4
 	plistfileContent="
 	<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n
 	<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n
@@ -193,6 +197,11 @@ function generateOptionsPlist
 	<string>$teamId</string>\n
 	<key>method</key>\n
 	<string>$method</string>\n
+	<key>provisioningProfiles</key>\n
+    <dict>\n
+        <key>$appBundleId</key>\n
+        <string>$profileName</string>\n
+    </dict>\n
 	<key>compileBitcode</key>\n
 	<false/>\n
 	</dict>\n
@@ -262,6 +271,10 @@ function showUsableCodeSign
 	for (( i = 0; i < ${#usableCodeSignList[@]}; i++ )); do
 		logit "${usableCodeSignList[$i]}"
 	done
+}
+
+function getXcodeVersion {
+	xcodeVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
 }
 
 
@@ -693,19 +706,21 @@ function build
 
 
 	##获取当前xcodebuild版本
-	xcVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
-	logit "xcodebuild 当前版本:$xcVersion"
+
+	logit "xcodebuild 当前版本:$xcodeVersion"
 
 
 	cmd="$xcodebuild -exportArchive"
-	if versiongreatethen "$xcVersion" "8.3"; then
-		logit "当前版本:$xcVersion"">8.3"
-		generateOptionsPlist "$profileTeamId" "$profileType"
+	## > 8.3
+	if versionCompareGE "$xcodeVersion" "8.3"; then
+		logit "当前版本:$xcodeVersion"" > 8.3， 生成 -exportOptionsPlist 参数所需的Plist文件:/tmp/optionsplist.plist"
+		generateOptionsPlist "$profileTeamId" "$profileType" "$appBundleId" "$profileName"
 		##发现在xcode8.3 之后-exportPath 参数需要指定一个目录，而8.3之前参数指定是一个带文件名的路径！坑！
 		 cmd="$cmd"" -archivePath \"$archivePath\" -exportPath \"$packageDir\" -exportOptionsPlist /tmp/optionsplist.plist" 
 
+	# < 8.3
 	else
-		logit "当前版本:$xcVersion""<8.3"
+		logit "当前版本:$xcodeVersion""<8.3"
 		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\""
 	fi
 	##判断是否安装xcpretty
@@ -728,6 +743,11 @@ function build
 function repairXcentFile
 {
 
+### xcode 9.0 已经修复该问题了，所以针对xcode 9.0 以下进行修复。
+
+
+if ! versionCompareGE "$xcodeVersion" "9.0"; then
+
 	appName=`basename "$exprotPath" .ipa`
 	xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
 	if [[ -f "$xcentFile" ]]; then
@@ -742,6 +762,7 @@ function repairXcentFile
 	else
 		errorExit "\"$xcentFile\" 文件不存在，修复Xcent文件失败!"
 	fi
+fi
 
 }
 
@@ -867,7 +888,7 @@ loginKeychainAccess
 checkForProjectFile
 checkIsExistWorkplace
 checkEnvironmentConfigureFile
-
+getXcodeVersion
 getEnvirionment
 getFirstTargets
 
