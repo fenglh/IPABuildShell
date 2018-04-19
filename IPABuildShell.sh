@@ -708,7 +708,6 @@ function build
 
 	##获取当前xcodebuild版本
 
-	logit "xcodebuild 当前版本:$xcodeVersion"
 
 
 	cmd="$xcodebuild -exportArchive"
@@ -721,7 +720,6 @@ function build
 
 	# < 8.3
 	else
-		logit "当前版本:$xcodeVersion""<8.3"
 		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\""
 	fi
 	##判断是否安装xcpretty
@@ -734,7 +732,7 @@ function build
 		errorExit "$xcodebuild exportArchive  执行失败!"
 	fi
 
-	logit "打包成功,IPA生成路径：\"$exprotPath\""
+	logit "IPA构建成功：\"$exprotPath\""
 
 
 }
@@ -752,16 +750,17 @@ if ! versionCompareGE "$xcodeVersion" "9.0"; then
 	appName=`basename "$exprotPath" .ipa`
 	xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
 	if [[ -f "$xcentFile" ]]; then
-		logit  "修复xcent文件：\"$xcentFile\" "
+		# logit  "修复xcent文件：\"$xcentFile\" "
+		logit  "archived-expanded-entitlements.xcent 文件：已修复"
 		unzip -o "$exprotPath" -d /"$packageDir" >/dev/null 2>&1
 		app="${packageDir}"/Payload/"${appName}".app
 		cp -af "$xcentFile" "$app" >/dev/null 2>&1
 		##压缩,并覆盖原有的ipa
 		cd "${packageDir}"  ##必须cd到此目录 ，否则zip会包含绝对路径
 		zip -qry  "$exprotPath" Payload >/dev/null 2>&1 && rm -rf Payload
-		cd -
+		cd - >/dev/null 2>&1
 	else
-		logit "忽略xcent文件修复：archivePath中不存在xcentFile文件，"
+		logit  "archived-expanded-entitlements.xcent 文件：跳过修复"
 	fi
 fi
 
@@ -802,6 +801,7 @@ function checkIPA
 		#支持的arch
 		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
 		logit "名字:$appShowingName"
+		logit "Xcode版本:$xcodeVersion"
 		getEnvirionment
 		logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 		logit "bundle identify:$appBundleId"
