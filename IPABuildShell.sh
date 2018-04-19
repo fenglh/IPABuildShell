@@ -63,9 +63,10 @@
 # 作者：
 #		fenglh	2018/04/12
 
-# 版本：2.0.5
+# 版本：2.0.6
 # 1. 优化build函数代码。
 # 2. 增加xcpretty 来格式化日志输出
+# 3. 支持xcode9（8.0~9.3）
 #		fenglh	2018/04/19
 
 backupDir=~/Desktop/PackageLog
