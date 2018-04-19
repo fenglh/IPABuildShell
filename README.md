@@ -27,7 +27,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 功能
 ==
-- 支持Xcode 8.0至8.3.2(其他版本还没试过)
+- 支持Xcode `8.0`至`9.3`
 - 支持ipa签名方式：development、app-store、enterprise，即内部分发、商店分发、企业分发
 - 自动匹配描述文件(Provisioning Profile)
 - 自动匹配签名身份(Code Signing Identity)
@@ -42,7 +42,8 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 - 自动修复企业分发ipa的XcentFile文件
 - 自动校验ipa签名
 - 同时支持个人开发者账号和企业开发者账号
-- 日志输出以及备份每次打包的ipa以及日志
+- 格式化xcodebuild编译过程日志输出
+- 日志输出颜色区分
 
 
 注1：
@@ -65,7 +66,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ` xcodeproj --help`
 3. ##### 安装xcpretty
   `gem install xcpretty`
-  
+
   可选，用来格式化xcodebuild输出日志。
 使用
 ==
@@ -108,7 +109,9 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ```
   /脚本目录/IPABuildShell.sh -c development
   ```
-![  打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_2.png)
+
+![](http://ozhqm0ga1.bkt.clouddn.com/2c78165d78800abb14bb17c389e95d95.png)
+
 ![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
 
 3. ##### 设置脚本快捷方式(可选)
