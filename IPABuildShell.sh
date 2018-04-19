@@ -752,16 +752,16 @@ if ! versionCompareGE "$xcodeVersion" "9.0"; then
 	appName=`basename "$exprotPath" .ipa`
 	xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
 	if [[ -f "$xcentFile" ]]; then
-		logit  "拷贝xcent文件：\"$xcentFile\" "
+		logit  "修复xcent文件：\"$xcentFile\" "
 		unzip -o "$exprotPath" -d /"$packageDir" >/dev/null 2>&1
 		app="${packageDir}"/Payload/"${appName}".app
-		cp -af "$xcentFile" "$app"
+		cp -af "$xcentFile" "$app" >/dev/null 2>&1
 		##压缩,并覆盖原有的ipa
 		cd "${packageDir}"  ##必须cd到此目录 ，否则zip会包含绝对路径
 		zip -qry  "$exprotPath" Payload >/dev/null 2>&1 && rm -rf Payload
 		cd -
 	else
-		errorExit "\"$xcentFile\" 文件不存在，修复Xcent文件失败!"
+		logit "忽略xcent文件修复：archivePath中不存在xcentFile文件，"
 	fi
 fi
 
