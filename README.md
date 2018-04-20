@@ -57,15 +57,15 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 安装
 ==
 
-1. ##### 安装Xcodeproj
+1. #### 安装Xcodeproj
 
   `[sudo] gem install xcodeproj`
 
-2. ##### 检查是否安装成功
+2. #### 检查是否安装成功
 
   ` xcodeproj --help`
 
-3. ##### 安装xcpretty（可选）
+3. #### 安装xcpretty（可选）
   `gem install xcpretty`
 
   用来格式化xcodebuild输出日志，建议安装
@@ -73,7 +73,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 使用
 ==
 
-1. ##### 配置config.plist文件
+1. #### 配置config.plist文件
   - LoginPwd 填写系统用户**密码** (可选，当keychains访问权限不足，则要用户密码解锁)
   - InterfaceEnvironmantConfig (可选，注2)
     - EnvironmentConfigFileName 填写你接口环境配置文件名
@@ -103,8 +103,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
   拷贝描述授权文件(`xxx.mobileprovision`)拷贝添加到`MobileProvisionFile`目录。
 
-
-3. ##### 构建ipa
+3. #### 构建ipa
 
   打开终端，`cd`到工程目录，执行下面命令开始构建你的ipa
 
@@ -115,7 +114,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ![](http://ozhqm0ga1.bkt.clouddn.com/2c78165d78800abb14bb17c389e95d95.png)
   ![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
 
-3. ##### 设置脚本快捷方式(可选)
+4. #### 设置脚本快捷方式(可选)
 
   打开终端，将下面代码“**脚本目录**”替换成相应的路径，并执行。
 
