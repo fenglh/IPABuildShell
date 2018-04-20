@@ -64,10 +64,11 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 2. ##### 检查是否安装成功
 
   ` xcodeproj --help`
-3. ##### 安装xcpretty
+3. ##### 安装xcpretty（可选）
   `gem install xcpretty`
 
-  可选，用来格式化xcodebuild输出日志。
+  用来格式化xcodebuild输出日志，建议安装
+
 使用
 ==
 
@@ -80,7 +81,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
     - devCodeSignIdentity 填写你的个人开发者账号的**开发环境签名身份**
     - disCodeSignIdentity 填写你的个人开发者账号的**生产环境签名身份**
     - bundleIdentifiers 填写你的个人开发者账号应用的**bundle identifier**
-  - Enterprise
+  - Enterprise （可选，注3）
     - devCodeSignIdentity 填写你的企业开发者账号的**开发环境签名身份**
     - disCodeSignIdentity 填写你的企业开发者账号的**生产环境签名身份**
     - bundleIdentifiers 填写你的企业开发者账号应用的**bundle identifier**
@@ -95,7 +96,8 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 默认情况下脚本打包是生产环境，也就是不带`-t`参数。
 
-
+  注3：
+  如果没有企业开发者账号可以忽略此配置。
 
 2. #### 添加描述文件
 
