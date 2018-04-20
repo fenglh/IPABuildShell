@@ -18,6 +18,7 @@ plistBuddy="/usr/libexec/PlistBuddy"
 xcodebuild="/usr/bin/xcodebuild"
 security="/usr/bin/security"
 codesign="/usr/bin/codesign"
+pod=`which pod`
 
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
@@ -257,6 +258,14 @@ function checkIsExistWorkplace
 	fi
 }
 
+function  podInstall 
+{
+	podfile=`find "$xcodeProject/.." -maxdepth 1  -type f -name "Podfile"`
+	if [[ -f "$podfile" ]]; then
+		logit "pod install"
+		$pod install 
+	fi
+}
 
 ##检查配置文件
 function checkEnvironmentConfigureFile
@@ -602,6 +611,7 @@ function setManulSigning
 ###开始构建
 function build
 {
+	logit "开始构建IPA..."
 	packageDir="$xcodeProject"/../build/package
 	rm -rf "$packageDir"/*
 	if [[ $debugConfiguration == true ]]; then
@@ -827,7 +837,10 @@ initConfiguration
 loginKeychainAccess
 checkForProjectFile
 checkIsExistWorkplace
+
+
 checkEnvironmentConfigureFile
+
 getXcodeVersion
 getEnvirionment
 getFirstTargets
@@ -843,7 +856,7 @@ setEnvironment
 setBuildVersion
 configureSigningByRuby
 showBuildSetting
-
+podInstall
 build
 repairXcentFile
 checkIPA
