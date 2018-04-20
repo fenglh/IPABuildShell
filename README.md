@@ -64,7 +64,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 2. ##### 检查是否安装成功
 
   ` xcodeproj --help`
-  
+
 3. ##### 安装xcpretty（可选）
   `gem install xcpretty`
 
@@ -87,35 +87,33 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
     - disCodeSignIdentity 填写你的企业开发者账号的**生产环境签名身份**
     - bundleIdentifiers 填写你的企业开发者账号应用的**bundle identifier**
 
-
-  - ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
+    ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_1.png)
 
   注2:
 
-  在项目中，为了方便统一修改接口的**正式/测试(生产/开发)环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试(生产/开发)环境**的开关!如果
-  你的项目配置生产和开发环境方式和这里不同，请忽略该配置。![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
-
-默认情况下脚本打包是生产环境，也就是不带`-t`参数。
+    在项目中，为了方便统一修改接口的**正式/测试环境**，所以我们在指定文件**BMNetworkingConfguration.h**中定义了一个全局变量作为**正式/测试环境**的开关!
+  
+    ![  config.plist](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_4.png)
 
   注3：
+
   如果没有企业开发者账号可以忽略此配置。
 
 2. #### 添加描述文件
 
-  将描述文件拷贝添加到`MobileProvisionFile`目录。
-  脚本会根据工程的bundle identifier匹配到对应的授权文件并进行签名配置。
+  拷贝描述授权文件(`xxx.mobileprovision`)拷贝添加到`MobileProvisionFile`目录。
+
 
 3. ##### 构建ipa
 
-  打开终端，cd到工程目录执行下面命令开始构建你的ipa
+  打开终端，`cd`到工程目录，执行下面命令开始构建你的ipa
 
   ```
   /脚本目录/IPABuildShell.sh -c development
   ```
 
-![](http://ozhqm0ga1.bkt.clouddn.com/2c78165d78800abb14bb17c389e95d95.png)
-
-![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
+  ![](http://ozhqm0ga1.bkt.clouddn.com/2c78165d78800abb14bb17c389e95d95.png)
+  ![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_3.png)
 
 3. ##### 设置脚本快捷方式(可选)
 
@@ -132,10 +130,14 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ```
   IPABuildShell.sh -h
   ```
-结合Jenkins神兵利器(略)
-==
 
-  配合Jenkins，通过在Jenkins中添加Shell的方式来完成IPA构建，那么可以实现真正的一键自动化打包。打包的事情就可以交给测试的同学自己去构建了......
+
+
+
+结合Jenkins神兵利器(略)
+===
+
+  配合Jenkins，通过在Jenkins中添加Shell的方式来完成IPA构建，那么打包的事情就可以交给测试的同学自己去构建了......
 
 
   ![ 打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_5.png)
@@ -143,25 +145,20 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
   ![打包](https://raw.githubusercontent.com/aa335418265/images/master/ipabuildshell_6.png)
 
 
-^_^
+最后
 ==
-各位大佬，如果觉得对你有帮助，高抬贵手star一下呗！
+如果本工具对你有帮助，麻烦Star一个！谢谢！
 
-不愿意？
+也欢迎各位提出给项目提出任何意见和建议。
+```
+# ----------------------------------------------------------------------
+# author:       冯立海
+# email:        335418265@qq.com
+# ----------------------------------------------------------------------
+```
 
-您别走，
 
-听我说，
 
-我有三个理由：
-
-求求您了！
-
-求求您了！
-
-求求您了！
-
-==
 ### 版本更新日志
 
 ```
