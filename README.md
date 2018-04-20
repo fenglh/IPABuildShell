@@ -148,7 +148,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 ==
 如果本工具对你有帮助，麻烦Star一个！谢谢！
 
-也欢迎各位提出给项目提出任何意见和建议。
+欢迎大家给项目提出任何意见和建议，我会尽我所能为大家解决！
 ```
 # ----------------------------------------------------------------------
 # author:       冯立海
