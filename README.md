@@ -64,6 +64,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 2. ##### 检查是否安装成功
 
   ` xcodeproj --help`
+  
 3. ##### 安装xcpretty（可选）
   `gem install xcpretty`
 
