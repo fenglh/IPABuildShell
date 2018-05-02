@@ -59,14 +59,14 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 1. #### 安装Xcodeproj
 
-  `[sudo] gem install xcodeproj`
+  `sudo gem install xcodeproj`
 
 2. #### 检查是否安装成功
 
   ` xcodeproj --help`
 
 3. #### 安装xcpretty（可选）
-  `gem install xcpretty`
+  `sudo gem install xcpretty`
 
   用来格式化xcodebuild输出日志，建议安装
 
