@@ -299,7 +299,7 @@ function getEnvirionment
 function getGitVersionCount
 {
 	gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
-	logit "当前版本数量:$gitVersionCount"
+	logit "【版本数量】:$gitVersionCount"
 }
 
 ##根据授权文件，自动匹配授权文件和签名身份
@@ -337,9 +337,9 @@ function autoMatchProvisionFile
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
 				matchMobileProvisionFile=$file
-				logit "授权文件匹配成功：${applicationIdentifier}，路径：$file"
+				logit "【授权文件】匹配到授权文件：${applicationIdentifier}，路径：$file"
                 profileTypeToName "${channel}"
-                logit "授权文件分发渠道：$profileTypeName"
+                logit "【授权文件】分发渠道：$profileTypeName"
 				break
 			fi
 		fi
@@ -373,7 +373,9 @@ function autoMatchProvisionFile
 	if [[ "$profileName" == '' ]]; then
 		errorExit "profileName=$profileName, 获取参数配置Profile的name失败!"
 	fi
-	logit "发现授权文件参数配置:${profileName}, uuid：$profileUuid, teamId:$profileTeamId"
+	logit "【授权文件】名字：${profileName}"
+	logit "【授权文件】UUID：$profileUuid"
+	logit "【授权文件】TeamId：$profileTeamId"
 
 }
 
@@ -406,7 +408,7 @@ function autoMatchCodeSignIdentity
 		fi
 	fi
 
-	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
+	logit "【签名】：匹配到签名:$matchCodeSignIdentity"
 
 }
 
@@ -419,7 +421,7 @@ function getFirstTargets
 	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
 	targetId=${targets[0]}
 	targetName=`$plistBuddy -c "Print :objects:$targetId:name" "$projectFile"`
-	logit "target名字：$targetName"
+	logit "【APP】名字：$targetName"
 	# buildTargetNames=(${buildTargetNames[*]} $targetName)
 
 
@@ -441,7 +443,7 @@ function getAPPBundleId
 	if [[ "$appBundleId" == '' ]]; then
 		errorExit "获取APP Bundle Id 是失败!!!"
 	fi
-	logit "appBundleId:$appBundleId"
+	logit "【APP】Bundle Id：$appBundleId"
 
 }
 
@@ -456,7 +458,7 @@ function showBuildSetting
 	for configurationId in ${buildConfigurations[@]}; do
 
 		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		logit "Target构建模式(Debug/release): $configurationName"
+		logit "【构建模式】(Debug/release): $configurationName"
 		# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
 		# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -604,21 +606,33 @@ function setOnlyActiveArch
 
 ##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
 
-##获取签名方式
-function getCodeSigningStyle
-{
-	##没有勾选过Automatically manage signning时，则不存在ProvisioningStyle
-	signingStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
-	logit "获取到target:${targetName}签名方式:$signingStyle"
-}
 
-function setManulSigning
+function setGeneralManulSigning
 {
-	if [[ "$signingStyle" != "Manual" ]]; then
+
+	##在General 中的“Automatically manage sign”选项
+	ProvisioningStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
+	logit "【签名方式】：General 中签名方式:$ProvisioningStyle"
+	if [[ "$ProvisioningStyle" != "Manual" ]]; then
 		##如果需要设置成自动签名,将Manual改成Automatic
 		$plistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$projectFile"
-		logit "设置${targetName}的签名方式为:Manual"
+		logit "【签名方式】：设置签名方式为:Manual"
 	fi
+
+	if  versionCompareGE "$xcodeVersion" "9.0"; then
+		for configurationId in ${buildConfigurations[@]}; do
+			configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
+			##在Setting 中的“Code Signing Style”选项
+			CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
+			logit "【签名方式】：Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
+			if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
+				##如果需要设置成自动签名,将Manual改成Automatic
+				$plistBuddy -c "Set :objects:$configurationId:buildSettings:CODE_SIGN_STYLE Manual" "$projectFile"
+				logit "【签名方式】：设置Setting 中${configurationName} 模式下的签名方式为:Manual"
+			fi
+		done
+	fi
+
 }
 
 
@@ -865,7 +879,7 @@ setBundleId
 autoMatchProvisionFile
 autoMatchCodeSignIdentity
 getGitVersionCount
-getCodeSigningStyle
+setGeneralManulSigning
 setEnvironment
 setBuildVersion
 configureSigningByRuby
