@@ -378,22 +378,33 @@ function autoMatchCodeSignIdentity
 {
 
 	matchCodeSignIdentity=''
-	if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
-		if [[ "$channel" == 'development' ]]; then
+
+
+	if [[ "$channel" == 'development' ]]; then
+		##在个人账号中
+		if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
 			matchCodeSignIdentity=$devCodeSignIdentityForPersion
-		elif [[ "$channel" == 'app-store' ]]; then
-			matchCodeSignIdentity=$disCodeSignIdentityForPersion
-		fi
-	elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
-		if [[ "$channel" == 'development' ]]; then
+		elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
 			matchCodeSignIdentity=$devCodeSignIdentityForEnterprise
-		elif [[ "$channel" == 'enterprise' ]]; then
-			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
+		else
+			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
 		fi
-	else
-		errorExit "无法匹配【${appBundleId}】的应用的签名，请检查Bundle Id “${$appBundleId}”是否配置在脚本开头的配置列表中!"
+	elif [[ "$channel" == 'app-store' ]]; then
+		if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
+			matchCodeSignIdentity=$disCodeSignIdentityForPersion
+		else
+			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
+		fi
+	elif [[ "$channel" == 'enterprise' ]]; then
+		if [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
+			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
+		else
+			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
+		fi
 	fi
+
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
+	exit 0
 }
 
 ##这里只取第一个target
