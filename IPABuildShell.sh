@@ -94,7 +94,8 @@ function initConfiguration() {
 }
 function clean
 {
-	for file in `ls $backupDir` ; do
+	if [[ -d "$backupDir" ]]; then
+		for file in `ls $backupDir` ; do
 		logit "清除上一次打包的文件或者文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
 			if [[ ! -f "$backupDir/$file" ]]; then
@@ -106,6 +107,8 @@ function clean
 			fi
 		fi
 	done
+	fi
+
 }
 
 ##登录keychain授权
