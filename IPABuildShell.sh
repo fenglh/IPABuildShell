@@ -404,7 +404,7 @@ function autoMatchCodeSignIdentity
 	fi
 
 	logit "匹配到${applicationIdentifier}的签名:$matchCodeSignIdentity"
-	exit 0
+
 }
 
 ##这里只取第一个target
