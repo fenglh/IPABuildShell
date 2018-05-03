@@ -96,7 +96,7 @@ function clean
 {
 	if [[ -d "$backupDir" ]]; then
 		for file in `ls $backupDir` ; do
-		logit "清除上一次打包的文件或者文件夹：$file"
+		logit "【备份】：备份上一次打包结果到History文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
 			if [[ ! -f "$backupDir/$file" ]]; then
 				continue;
@@ -225,6 +225,7 @@ function getXcodeVersion {
 }
 
 
+
 ##检查xcode project
 function checkForProjectFile
 {
@@ -243,11 +244,38 @@ function checkForProjectFile
 		if [[ ! -f "$projectFile" ]]; then
 			errorExit "项目文件:\"$projectFile\" 不存在"
 		fi
-		logit "发现pbxproj:\"$projectFile\""
+		logit "【检查】：发现pbxproj:\"$projectFile\""
 	fi
-
-
 }
+
+##备份项目配置文件
+# function backupProjectFile {
+#   if [[ ! -f "$projectFile" ]]; then
+#     errorExit "备份项目文件失败:\"$projectFile\" 不存在"
+#   fi
+
+#   ## 强制覆盖
+#   bak="${projectFile}.bak"
+#   cp -f "$projectFile" "$bak"
+#   if [[ $? -eq 0 ]]; then
+#     ## 对备份之前的项目文件做MD5
+#     # projectFileMD5 = `md5 "$bak"`
+#     logit "【备份】：备份项目文件为：${bak}"
+#   fi
+# }
+
+##恢复项目文件
+# function recoverProjectFile {
+#   bak="${projectFile}.bak"
+#   # bakFileMD5 = `md5 "$bak"`
+#   if [[  -f "$bak" ]] ; then
+#       mv "$bak" "$projectFile"
+#       if [[ $? -eq 0 ]]; then
+#         logit "【还原】还原项目文件"
+#       fi
+#   fi
+# }
+
 
 ##检查是否存在workplace,当前只能通过遍历的方法来查找
 function checkIsExistWorkplace
@@ -255,18 +283,18 @@ function checkIsExistWorkplace
 	xcworkspace=`find "$xcodeProject/.." -maxdepth 1  -type d -name "*.xcworkspace"`
 	if [[ -d "$xcworkspace" ]]; then
 		isExistXcWorkspace=true
-		logit "发现xcworkspace:$xcworkspace"
+		logit "【检查】：发现xcworkspace:$xcworkspace"
 	else
 		isExistXcWorkspace=false;
 	fi
 }
 
-function  podInstall 
+function  podInstall
 {
 	podfile=`find "$xcodeProject/.." -maxdepth 1  -type f -name "Podfile"`
 	if [[ -f "$podfile" ]]; then
 		logit "pod install"
-		$pod install 
+		$pod install
 	fi
 }
 
@@ -276,10 +304,10 @@ function checkEnvironmentConfigureFile
 	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigFileName" -print| head -n 1`
 	if [[ ! -f "$environmentConfigureFile" ]]; then
 		haveConfigureEnvironment=false;
-		logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
+		#logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
 	else
 		haveConfigureEnvironment=true;
-		logit "发现接口环境配置文件:${environmentConfigureFile}"
+		logit "【检查】：发现接口环境配置文件:${environmentConfigureFile}"
 	fi
 }
 
@@ -288,7 +316,7 @@ function getEnvirionment
 	if [[ $haveConfigureEnvironment == true ]]; then
 		environmentValue=$(grep "$environmentConfigVariableName" "$environmentConfigureFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
 		currentEnvironmentValue=$environmentValue
-		logit "当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+		logit "【接口环境配置】：当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 	fi
 
 
@@ -467,7 +495,7 @@ function showBuildSetting
 		developmentTeam=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		iphoneosDeploymentTarget=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:IPHONEOS_DEPLOYMENT_TARGET" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		# onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		productBundleIdentifier=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		productName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_NAME" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
 		provisionProfileUuid=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
@@ -476,16 +504,16 @@ function showBuildSetting
 		# logit "codeSignEntitlements:$codeSignEntitlements"
 		# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
 
-		logit "developmentTeam:$developmentTeam"
-		logit "infoPlistFile:$infoPlistFile"
-		logit "iphoneosDeploymentTarget:$iphoneosDeploymentTarget"
-		logit "onlyActiveArch:$onlyActiveArch"
-		logit "BundleId:$productBundleIdentifier"
-		logit "productName:$productName"
-		logit "provisionProfileUuid:$provisionProfileUuid"
-		logit "provisionProfileName:$provisionProfileName"
-		logit "codeSignIdentity:$codeSignIdentity"
-		logit "codeSignIdentitySDK:$codeSignIdentitySDK"
+		logit "【developmentTeam】:$developmentTeam"
+		logit "【info Plist 文件】:$infoPlistFile"
+		logit "【iphoneosDeploymentTarget】:$iphoneosDeploymentTarget"
+		# logit "【onlyActiveArch】:$onlyActiveArch"
+		logit "【BundleId】:$productBundleIdentifier"
+		logit "【productName】:$productName"
+		logit "【provisionProfileUuid】:$provisionProfileUuid"
+		logit "【provisionProfileName】:$provisionProfileName"
+		logit "【codeSignIdentity】:$codeSignIdentity"
+		logit "【codeSignIdentitySDK】:$codeSignIdentitySDK"
 	done
 }
 
@@ -549,7 +577,7 @@ function setBuildVersion
 	infoPlistFilePath="$xcodeProject"/../$infoPlistFile
 	if [[ -f "$infoPlistFilePath" ]]; then
 		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
-		logit "设置Buil Version:${gitVersionCount}"
+		logit "【Build Version】设置Buil Version:${gitVersionCount}"
 	else
 		errorExit "${infoPlistFilePath}文件不存在，无法修改"
 	fi
@@ -589,24 +617,20 @@ function setEnvironment
 	fi
 }
 
-##设置NO,只打标准arch
-function setOnlyActiveArch
-{
-	for configurationId in ${buildConfigurations[@]}; do
-		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		if [[ "$onlyActiveArch" != "NO" ]]; then
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH NO" "$projectFile"
-			logit "设置${configurationName}模式的ONLY_ACTIVE_ARCH:NO"
-		fi
 
-	done
+
+function setDisableBitCode {
+
+  for configurationId in ${buildConfigurations[@]}; do
+    ENABLE_BITCODE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ENABLE_BITCODE" "$projectFile" `
+    if [[ "$ENABLE_BITCODE" == "YES" ]]; then
+        $plistBuddy -c "Set :objects:$configurationId:buildSettings:ENABLE_BITCODE NO" "$projectFile"
+        logit "【BitCode】：设置Enable Bitcode ：NO"
+    fi
+  done;
 }
 
-
 ##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
-
-
 function setGeneralManulSigning
 {
 
@@ -780,23 +804,23 @@ function checkIPA
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile"`
 		#支持的arch
 		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
-		logit "名字:$appShowingName"
-		logit "Xcode版本:$xcodeVersion"
-		getEnvirionment
-		logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
-		logit "bundle identify:$appBundleId"
-		logit "版本:$appVersion"
-		logit "build:$appBuildVersion"
-		logit "支持最低iOS版本:$supportMinimumOSVersion"
-		logit "支持的arch:$supportArchitectures"
-		logit "签名:$appCodeSignIdenfifier"
-		logit "授权文件:${appMobileProvisionName}.mobileprovision"
-		logit "授权文件创建时间:$appMobileProvisionCreationDate"
-		logit "授权文件过期时间:$appMobileProvisionExpirationDate"
-        logit "授权文件有效天数：${expirationDays} 天"
+		logit "【IPA】：名字:$appShowingName"
+		logit "【IPA】：Xcode版本:$xcodeVersion"
+		# getEnvirionment
+		logit "【IPA】：配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+		logit "【IPA】：bundle identify:$appBundleId"
+		logit "【IPA】：版本:$appVersion"
+		logit "【IPA】：build:$appBuildVersion"
+		logit "【IPA】：支持最低iOS版本:$supportMinimumOSVersion"
+		logit "【IPA】：支持的arch:$supportArchitectures"
+		logit "【IPA】：签名:$appCodeSignIdenfifier"
+		logit "【IPA】：授权文件:${appMobileProvisionName}.mobileprovision"
+		logit "【IPA】：授权文件创建时间:$appMobileProvisionCreationDate"
+		logit "【IPA】：授权文件过期时间:$appMobileProvisionExpirationDate"
+    logit "【IPA】：授权文件有效天数：${expirationDays} 天"
 		getProfileType "$mobileProvisionFile"
         profileTypeToName "$profileType"
-		logit "分发渠道:$profileTypeName"
+		logit "【IPA】：分发渠道:$profileTypeName"
 
 	else
 		errorExit "解压失败！无法找到$app"
@@ -829,7 +853,7 @@ function renameAndBackup
 	name=${appShowingName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
 	ipaName=${name}.ipa
 	textLogName=${name}.txt
-	logit "ipa重命名并备份到：$backupDir/$ipaName"
+	logit "【IPA】：ipa重命名并备份到：$backupDir/$ipaName"
 
 	mv "$exprotPath" "$packageDir"/$ipaName
 	cp -af "$packageDir"/$ipaName $backupDir/$ipaName
@@ -879,6 +903,7 @@ setBundleId
 autoMatchProvisionFile
 autoMatchCodeSignIdentity
 getGitVersionCount
+setDisableBitCode
 setGeneralManulSigning
 setEnvironment
 setBuildVersion
@@ -892,4 +917,4 @@ renameAndBackup
 
 endDateSeconds=`date +%s`
 
-logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
+logit "【构建时长】：构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"

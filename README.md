@@ -162,6 +162,55 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 ```
 #--------------------------------------------
+# 2018/04/19
+# 版本：2.0.6
+# 1. 优化build函数代码。
+# 2. 增加xcpretty 来格式化日志输出
+# 3. 支持xcode9（8.0~9.3）
+#
+#--------------------------------------------
+# 2018/04/12
+# 版本：2.0.5
+# 优化：
+# 1. 增加一个“修改Bundle Id”功能。如-b com.xxx.xx。
+# 2. 优化一些代码
+#
+#--------------------------------------------
+# 2018/03/22
+# 版本：2.0.4
+# 优化：默认构建ipa支持armch 为 arm64。（因iOS 11强制禁用32位）
+#
+#--------------------------------------------
+# 版本：2.0.3
+# 2018/03/12
+#
+# 优化：对授权文件mobiprovision有效期检测，授权文件有效期小于90天，强制打包失败！
+#
+#--------------------------------------------
+# 2017/08/05
+#
+# 版本：2.0.2
+# 优化：兼容xcode8.3以上版本
+# xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
+# Available options: app-store, ad-hoc, package, enterprise, development, and developer-id.
+# 当前用到：app-store ,ad-hoc, enterprise, development
+#
+#--------------------------------------------
+# 2016/04/01
+#
+# 版本：2.0.1
+# 优化：
+#		为了节省打包时间，在打开发环境的包时，只打armv7
+#		profileType==development 时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。
+#
+#--------------------------------------------
+# 2016/03/08
+#
+# 版本：2.0.0
+# 优化：
+#		1.去掉可配置签名、授权文件，并修改为自动匹配签名和授权文件！
+#
+#--------------------------------------------
 # 2016/03/06
 #
 # 版本：1.0.0
@@ -180,54 +229,6 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 # 备注：
 #		1.security 命令会报警告,忽略即可:security: SecPolicySetValue: One or more parameters passed to a function were not valid.
 #		2.支持Xcode8.0及以上版本（8.0前没有测试过）
-#--------------------------------------------
-# 2016/03/08
-#
-# 版本：2.0.0
-# 优化：
-#		1.去掉可配置签名、授权文件，并修改为自动匹配签名和授权文件！
-#
-#--------------------------------------------
-# 2016/04/01
-#
-# 版本：2.0.1
-# 优化：
-#		为了节省打包时间，在打开发环境的包时，只打armv7
-#		profileType==development 时，设置archs=armv7 （向下兼容） ，否则archs为默认值：arm64 和armv7。
-#
-#--------------------------------------------
-# 2017/08/05
-#
-# 版本：2.0.2
-# 优化：兼容xcode8.3以上版本
-# xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
-# Available options: app-store, ad-hoc, package, enterprise, development, and developer-id.
-# 当前用到：app-store ,ad-hoc, enterprise, development
-#
-#--------------------------------------------
-# 版本：2.0.3
-# 2018/03/12
-#
-# 优化：对授权文件mobiprovision有效期检测，授权文件有效期小于90天，强制打包失败！
-#
-#--------------------------------------------
-# 2018/03/22
-# 版本：2.0.4
-# 优化：默认构建ipa支持armch 为 arm64。（因iOS 11强制禁用32位）
-#
-#--------------------------------------------
-# 2018/04/12
-# 版本：2.0.5
-# 优化：
-# 1. 增加一个“修改Bundle Id”功能。如-b com.xxx.xx。
-# 2. 优化一些代码
-#
-#--------------------------------------------
-# 2018/04/19
-# 版本：2.0.6
-# 1. 优化build函数代码。
-# 2. 增加xcpretty 来格式化日志输出
-# 3. 支持xcode9（8.0~9.3）
-#
-#--------------------------------------------
+
+
 ```
