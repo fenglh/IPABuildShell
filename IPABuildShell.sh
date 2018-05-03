@@ -95,7 +95,7 @@ function clean
 {
 	if [[ -d "$backupDir" ]]; then
 		for file in `ls $backupDir` ; do
-		logit "【备份】：备份上一次打包结果到History文件夹：$file"
+		logit "【备份】备份上一次打包结果到History文件夹：$file"
 		if [[ "$file" != 'History' ]]; then
 			if [[ ! -f "$backupDir/$file" ]]; then
 				continue;
@@ -243,7 +243,7 @@ function checkForProjectFile
 		if [[ ! -f "$projectFile" ]]; then
 			errorExit "项目文件:\"$projectFile\" 不存在"
 		fi
-		logit "【检查】：发现pbxproj:\"$projectFile\""
+		logit "【检查】发现pbxproj:\"$projectFile\""
 	fi
 }
 
@@ -259,7 +259,7 @@ function checkForProjectFile
 #   if [[ $? -eq 0 ]]; then
 #     ## 对备份之前的项目文件做MD5
 #     # projectFileMD5 = `md5 "$bak"`
-#     logit "【备份】：备份项目文件为：${bak}"
+#     logit "【备份】备份项目文件为：${bak}"
 #   fi
 # }
 
@@ -282,7 +282,7 @@ function checkIsExistWorkplace
 	xcworkspace=`find "$xcodeProject/.." -maxdepth 1  -type d -name "*.xcworkspace"`
 	if [[ -d "$xcworkspace" ]]; then
 		isExistXcWorkspace=true
-		logit "【检查】：发现xcworkspace:$xcworkspace"
+		logit "【检查】发现xcworkspace:$xcworkspace"
 	else
 		isExistXcWorkspace=false;
 	fi
@@ -306,7 +306,7 @@ function checkEnvironmentConfigureFile
 		#logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
 	else
 		haveConfigureEnvironment=true;
-		logit "【检查】：发现接口环境配置文件:${environmentConfigureFile}"
+		logit "【检查】发现接口环境配置文件:${environmentConfigureFile}"
 	fi
 }
 
@@ -315,7 +315,7 @@ function getEnvirionment
 	if [[ $haveConfigureEnvironment == true ]]; then
 		environmentValue=$(grep "$environmentConfigVariableName" "$environmentConfigureFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
 		currentEnvironmentValue=$environmentValue
-		logit "【接口环境配置】：当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+		logit "【接口环境配置】当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
 	fi
 
 
@@ -326,7 +326,7 @@ function getEnvirionment
 function getGitVersionCount
 {
 	gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
-	logit "【版本数量】：$gitVersionCount"
+	logit "【版本数量】$gitVersionCount"
 }
 
 ##根据授权文件，自动匹配授权文件和签名身份
@@ -380,7 +380,7 @@ function autoMatchProvisionFile
     ##企业分发，那么检查授权文件有效期
     if [[ "$channel" == 'enterprise' ]];then
         getProvisionfileExpirationDays "$matchMobileProvisionFile"
-        logit "授权文件有效时长：${expirationDays} 天";
+        logit "【授权文件】授权文件有效时长：${expirationDays} 天";
         if [[ $expirationDays -lt 0 ]];then
             profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
             errorExit "授权文件已经过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate}, 过期天数：${expirationDays#-} 天"
@@ -435,7 +435,7 @@ function autoMatchCodeSignIdentity
 		fi
 	fi
 
-	logit "【签名】：匹配到签名:$matchCodeSignIdentity"
+	logit "【签名】匹配到签名:$matchCodeSignIdentity"
 
 }
 
@@ -641,7 +641,7 @@ function setDisableBitCode {
 	ENABLE_BITCODE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ENABLE_BITCODE" "$projectFile" `
 	if [[ "$ENABLE_BITCODE" == "YES" ]]; then
 	    $plistBuddy -c "Set :objects:$configurationId:buildSettings:ENABLE_BITCODE NO" "$projectFile"
-	    logit "【BitCode】：设置Enable Bitcode ：NO"
+	    logit "【BitCode】设置Enable Bitcode ：NO"
 	fi
 }
 
@@ -651,24 +651,30 @@ function setGeneralManulSigning
 
 	##在General 中的“Automatically manage sign”选项
 	ProvisioningStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
-	logit "【签名方式】：General 中签名方式:$ProvisioningStyle"
+	logit "【签名方式】General 中签名方式:$ProvisioningStyle"
 	if [[ "$ProvisioningStyle" != "Manual" ]]; then
 		##如果需要设置成自动签名,将Manual改成Automatic
 		$plistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$projectFile"
-		logit "【签名方式】：设置签名方式为:Manual"
+		logit "【签名方式】设置签名方式为:Manual"
 	fi
 
 	if  versionCompareGE "$xcodeVersion" "9.0"; then
-		## 设置configurationId下的签名
-		configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-		##在Setting 中的“Code Signing Style”选项
-		CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
-		logit "【签名方式】：Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
-		if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
-			##如果需要设置成自动签名,将Manual改成Automatic
-			$plistBuddy -c "Set :objects:$configurationId:buildSettings:CODE_SIGN_STYLE Manual" "$projectFile"
-			logit "【签名方式】：设置Setting 中${configurationName} 模式下的签名方式为:Manual"
-		fi
+		## 这里必须对Release 和Debug 同时进行设置，不然会签名失败
+		for id in ${buildConfigurations[@]}; do
+
+			## 设置configurationId下的签名
+			configurationName=`$plistBuddy -c "Print :objects:$id:name" "$projectFile"`
+			##在Setting 中的“Code Signing Style”选项
+			CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$id:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
+			logit "【签名方式】Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
+			if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
+				##如果需要设置成自动签名,将Manual改成Automatic
+				$plistBuddy -c "Set :objects:$id:buildSettings:CODE_SIGN_STYLE Manual" "$projectFile"
+				logit "【签名方式】设置Setting 中${configurationName} 模式下的签名方式为:Manual"
+			fi
+
+		done
+
 
 	fi
 
@@ -819,23 +825,23 @@ function checkIPA
 		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile"`
 		#支持的arch
 		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
-		logit "【IPA】：名字:$appShowingName"
-		logit "【IPA】：Xcode版本:$xcodeVersion"
+		logit "【IPA】名字:$appShowingName"
+		logit "【IPA】Xcode版本:$xcodeVersion"
 		# getEnvirionment
-		logit "【IPA】：配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
-		logit "【IPA】：bundle identify:$appBundleId"
-		logit "【IPA】：版本:$appVersion"
-		logit "【IPA】：build:$appBuildVersion"
-		logit "【IPA】：支持最低iOS版本:$supportMinimumOSVersion"
-		logit "【IPA】：支持的arch:$supportArchitectures"
-		logit "【IPA】：签名:$appCodeSignIdenfifier"
-		logit "【IPA】：授权文件:${appMobileProvisionName}.mobileprovision"
-		logit "【IPA】：授权文件创建时间:$appMobileProvisionCreationDate"
-		logit "【IPA】：授权文件过期时间:$appMobileProvisionExpirationDate"
-    logit "【IPA】：授权文件有效天数：${expirationDays} 天"
+		logit "【IPA】配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+		logit "【IPA】bundle identify:$appBundleId"
+		logit "【IPA】版本:$appVersion"
+		logit "【IPA】build:$appBuildVersion"
+		logit "【IPA】支持最低iOS版本:$supportMinimumOSVersion"
+		logit "【IPA】支持的arch:$supportArchitectures"
+		logit "【IPA】签名:$appCodeSignIdenfifier"
+		logit "【IPA】授权文件:${appMobileProvisionName}.mobileprovision"
+		logit "【IPA】授权文件创建时间:$appMobileProvisionCreationDate"
+		logit "【IPA】授权文件过期时间:$appMobileProvisionExpirationDate"
+    logit "【IPA】授权文件有效天数：${expirationDays} 天"
 		getProfileType "$mobileProvisionFile"
         profileTypeToName "$profileType"
-		logit "【IPA】：分发渠道:$profileTypeName"
+		logit "【IPA】分发渠道:$profileTypeName"
 
 	else
 		errorExit "解压失败！无法找到$app"
@@ -868,7 +874,7 @@ function renameAndBackup
 	name=${appShowingName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
 	ipaName=${name}.ipa
 	textLogName=${name}.txt
-	logit "【IPA】：ipa重命名并备份到：$backupDir/$ipaName"
+	logit "【IPA】ipa重命名并备份到：$backupDir/$ipaName"
 
 	mv "$exprotPath" "$packageDir"/$ipaName
 	cp -af "$packageDir"/$ipaName $backupDir/$ipaName
@@ -933,4 +939,4 @@ renameAndBackup
 
 endDateSeconds=`date +%s`
 
-logit "【构建时长】：构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
+logit "【构建时长】构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
