@@ -666,6 +666,11 @@ function setManulSigning
 			## 设置configurationId下的签名
 			configurationName=`$plistBuddy -c "Print :objects:$id:name" "$projectFile"`
 			CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$id:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
+			if [[ $? -ne 0 ]]; then
+				## 表示不存在，则添加
+				logit "签名方式】添加CODE_SIGN_STYLE"
+				$plistBuddy -c "Add :objects:$id:buildSettings:CODE_SIGN_STYLE string Manual" "$projectFile"
+			fi
 			logit "【签名方式】Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
 			if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
 				##如果需要设置成自动签名,将Manual改成Automatic
