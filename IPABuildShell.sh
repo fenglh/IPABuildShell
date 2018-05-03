@@ -576,7 +576,7 @@ function setBundleId() {
 	    appBundleId=$newBundleId;
 	    logit "设置Bundle Id:$newBundleId"
 	  else
-	    errorExit "无法设置Bundle Id为:$newBundleId。"
+	    errorExit "无法设置Bundle Id为:$newBundleId。"
 	  fi
 
   fi
@@ -646,7 +646,7 @@ function setDisableBitCode {
 }
 
 ##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
-function setGeneralManulSigning
+function setManulSigning
 {
 
 	##在General 中的“Automatically manage sign”选项
@@ -658,13 +658,13 @@ function setGeneralManulSigning
 		logit "【签名方式】设置签名方式为:Manual"
 	fi
 
+	##在Setting 中的“Code Signing Style”选项
 	if  versionCompareGE "$xcodeVersion" "9.0"; then
 		## 这里必须对Release 和Debug 同时进行设置，不然会签名失败
 		for id in ${buildConfigurations[@]}; do
 
 			## 设置configurationId下的签名
 			configurationName=`$plistBuddy -c "Print :objects:$id:name" "$projectFile"`
-			##在Setting 中的“Code Signing Style”选项
 			CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$id:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
 			logit "【签名方式】Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
 			if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
@@ -926,7 +926,7 @@ autoMatchProvisionFile
 autoMatchCodeSignIdentity
 getGitVersionCount
 setDisableBitCode
-setGeneralManulSigning
+setManulSigning
 setEnvironment
 setBuildVersion
 configureSigningByRuby
