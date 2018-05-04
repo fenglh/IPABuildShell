@@ -325,8 +325,12 @@ function getEnvirionment
 ##获取git版本数量
 function getGitVersionCount
 {
-	gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
-	logit "【版本数量】$gitVersionCount"
+	## 是否存在.git目录
+	if [[ -d ".git" ]]; then
+		gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
+		logit "【版本数量】$gitVersionCount"
+	fi
+
 }
 
 ##根据授权文件，自动匹配授权文件和签名身份
@@ -586,17 +590,19 @@ function setBundleId() {
 function setBuildVersion
 {
 
-  ##获取configurationId 下的Build Version
-
-  infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-  ### 完整路径
-	infoPlistFilePath="$xcodeProject"/../$infoPlistFile
-	if [[ -f "$infoPlistFilePath" ]]; then
-		$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
-		logit "【Build Version】设置Buil Version:${gitVersionCount}"
-	else
-		errorExit "${infoPlistFilePath}文件不存在，无法修改"
+	if [[ -d '.git' ]]; then
+	  ##获取configurationId 下的Build Version
+	  infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	  ### 完整路径
+		infoPlistFilePath="$xcodeProject"/../$infoPlistFile
+		if [[ -f "$infoPlistFilePath" ]]; then
+			$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
+			logit "【Build Version】设置Buil Version:${gitVersionCount}"
+		else
+			errorExit "${infoPlistFilePath}文件不存在，无法修改"
+		fi
 	fi
+
 
 
 }
@@ -606,6 +612,11 @@ function configureSigningByRuby
 {
 	logitVerbose "========================配置签名身份和描述文件========================"
 	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
+	logit "xcodeProject:$xcodeProject"
+	logit "profileUuid:$profileUuid"
+	logit "profileName:$profileName"
+	logit "matchCodeSignIdentity:$matchCodeSignIdentity"
+	logit "profileTeamId:$profileTeamId"
 	ruby ${rbDir}/xceditor.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
 	if [[ $? -ne 0 ]]; then
 		errorExit "xceditor.rb 修改配置失败！！"
@@ -639,10 +650,18 @@ function setDisableBitCode {
 
 	## 设置configurationId下的BitCode配置
 	ENABLE_BITCODE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ENABLE_BITCODE" "$projectFile" `
-	if [[ "$ENABLE_BITCODE" == "YES" ]]; then
+	if [[ $? -ne 0 ]]; then
+		## 表示不存在，则添加
+		logit "签名方式】添加ENABLE_BITCODE"
+		$plistBuddy -c "Add :objects:$id:buildSettings:ENABLE_BITCODE bool NO" "$projectFile"
+	else 
+		if [[ "$ENABLE_BITCODE" == "YES" ]]; then
 	    $plistBuddy -c "Set :objects:$configurationId:buildSettings:ENABLE_BITCODE NO" "$projectFile"
 	    logit "【BitCode】设置Enable Bitcode ：NO"
+		fi
 	fi
+
+
 }
 
 ##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
@@ -754,7 +773,7 @@ function build
 	fi
 	##判断是否安装xcpretty
 	if which xcpretty  >/dev/null 2>&1 ;then
-		cmd="$cmd"" | xcpretty -c"
+		cmd="$cmd"" | xcpretty "
 	fi
 	eval "set -o pipefail && $cmd"
 
