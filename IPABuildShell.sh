@@ -2,8 +2,8 @@
 
 # ----------------------------------------------------------------------
 # name:         IPABuildShell.sh
-# version:      2.0.6
-# createTime:   2018-04-20
+# version:      2.1.0
+# createTime:   2018-05-04
 # description:  iOS 自动打包
 # author:       冯立海
 # email:        335418265@qq.com
@@ -18,12 +18,12 @@ plistBuddy="/usr/libexec/PlistBuddy"
 xcodebuild="/usr/bin/xcodebuild"
 security="/usr/bin/security"
 codesign="/usr/bin/codesign"
+xcconfigFile="/tmp/build.xcconfig"
 pod=`which pod`
 
 ruby="/usr/bin/ruby"
 lipo="/usr/bin/lipo"
 currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )"
-##默认分发渠道是内部测试
 channel='development'
 verbose=true
 productionEnvironment=true
@@ -61,6 +61,8 @@ function logitVerbose
 }
 
 
+
+
 function profileTypeToName
 {
     profileType=$1
@@ -73,6 +75,8 @@ function profileTypeToName
     fi
 
 }
+
+
 
 
 function initConfiguration() {
@@ -91,6 +95,7 @@ function initConfiguration() {
 	bundleIdsForPersion=`$plistBuddy -c 'Print :Individual:bundleIdentifiers' $configPlist`
 	bundleIdsForEnterprise=`$plistBuddy -c 'Print :Enterprise:bundleIdentifiers' $configPlist`
 }
+
 function clean
 {
 	if [[ -d "$backupDir" ]]; then
@@ -126,6 +131,39 @@ function loginKeychainAccess
 
 	fi
 }
+
+
+
+function initXCconfig {
+	logit "【XCconfig 配置】初始化xcconfig文件"
+	if [[ -f "$xcconfigFile" ]]; then
+		## 清空
+		> "$xcconfigFile"
+	else 
+		## 生成文件
+		touch "$xcconfigFile"
+	fi
+}
+
+function setXCconfigWithKeyValue {
+
+	key="$1"
+	value="$2"
+	if [[ "$key" == '' ]] || [[ "$value" == '' ]]; then
+		errorExit  "函数调用出错：setXCconfigWithKeyValue 必须传入两个参数"
+	fi
+	
+	if grep -q "[ ]*$key[ ]*=.*" "$xcconfigFile";then 
+		## 进行替换
+		sed -i "_bak" "s/[ ]*$key[ ]*=.*/$key = $value/g" "$xcconfigFile"
+		logit "【XCconfig 配置】更新配置：$key = $value"
+	else 
+		## 进行追加(重定位)
+		echo "$key = $value" >>"$xcconfigFile"
+		logit "【XCconfig 配置】添加配置：$key = $value"
+	fi
+}
+
 
 ##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
 function generateOptionsPlist
@@ -172,21 +210,6 @@ function checkChannel
 
 
 
-##设置命令快捷方式
-# function setAliasShortCut
-# {
-# 	bashProfile=$HOME/.bash_profile
-# 	if [[ ! -f $bashProfile ]]; then
-# 		touch $bashProfile
-# 	fi
-# 	shellFilePath="$currentShellDir/`basename "$0"`"
-#
-# 	aliasString="alias gn=\"$shellFilePath -g\""
-# 	grep "$aliasString" $bashProfile
-# 	if [[ $? -ne 0 ]]; then
-# 		echo $aliasString >> $bashProfile
-# 	fi
-# }
 
 function usage
 {
@@ -247,33 +270,7 @@ function checkForProjectFile
 	fi
 }
 
-##备份项目配置文件
-# function backupProjectFile {
-#   if [[ ! -f "$projectFile" ]]; then
-#     errorExit "备份项目文件失败:\"$projectFile\" 不存在"
-#   fi
 
-#   ## 强制覆盖
-#   bak="${projectFile}.bak"
-#   cp -f "$projectFile" "$bak"
-#   if [[ $? -eq 0 ]]; then
-#     ## 对备份之前的项目文件做MD5
-#     # projectFileMD5 = `md5 "$bak"`
-#     logit "【备份】备份项目文件为：${bak}"
-#   fi
-# }
-
-##恢复项目文件
-# function recoverProjectFile {
-#   bak="${projectFile}.bak"
-#   # bakFileMD5 = `md5 "$bak"`
-#   if [[  -f "$bak" ]] ; then
-#       mv "$bak" "$projectFile"
-#       if [[ $? -eq 0 ]]; then
-#         logit "【还原】还原项目文件"
-#       fi
-#   fi
-# }
 
 
 ##检查是否存在workplace,当前只能通过遍历的方法来查找
@@ -362,13 +359,14 @@ function autoMatchProvisionFile
 
 	matchMobileProvisionFile=''
 	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
-		applicationIdentifier=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
-		applicationIdentifier=${applicationIdentifier#*.}
-		if [[ "$appBundleId" == "$applicationIdentifier" ]]; then
+		provisionFileBundleId=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
+		##截取到第一个.号后面的字符串
+		provisionFileBundleId=${provisionFileBundleId#*.}
+		if [[ "$appBundleId" == "$provisionFileBundleId" ]]; then
 			getProfileType $file
 			if [[ "$profileType" == "$channel" ]]; then
 				matchMobileProvisionFile=$file
-				logit "【授权文件】匹配到授权文件：${applicationIdentifier}，路径：$file"
+				logit "【授权文件】匹配到授权文件：${provisionFileBundleId}，路径：$file"
                 profileTypeToName "${channel}"
                 logit "【授权文件】分发渠道：$profileTypeName"
 				break
@@ -378,7 +376,7 @@ function autoMatchProvisionFile
 
 	if [[ $matchMobileProvisionFile == '' ]]; then
         profileTypeToName "${channel}"
-		errorExit "无法匹配${appBundleId} 分发渠道为【${profileTypeName}】的授权文件"
+		errorExit "无法匹配${appBundleId} 分发渠道为【${profileTypeName}】的授权文件,请检查是否添加授权文件到MobileProvisionFile目录了?"
 	fi
 
     ##企业分发，那么检查授权文件有效期
@@ -404,9 +402,15 @@ function autoMatchProvisionFile
 	if [[ "$profileName" == '' ]]; then
 		errorExit "profileName=$profileName, 获取参数配置Profile的name失败!"
 	fi
-	logit "【授权文件】名字：${profileName}"
-	logit "【授权文件】UUID：$profileUuid"
-	logit "【授权文件】TeamId：$profileTeamId"
+
+
+	setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$profileName"
+	setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$profileUuid"
+	setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$profileTeamId"
+
+	# logit "【授权文件】名字：${profileName}"
+	# logit "【授权文件】UUID：$profileUuid"
+	# logit "【授权文件】TeamId：$profileTeamId"
 
 }
 
@@ -438,8 +442,10 @@ function autoMatchCodeSignIdentity
 			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
 		fi
 	fi
+	
 
-	logit "【签名】匹配到签名:$matchCodeSignIdentity"
+	# logit "【签名】匹配到签名:$matchCodeSignIdentity"
+	setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$matchCodeSignIdentity"
 
 }
 
@@ -453,7 +459,6 @@ function getFirstTargets
 	targetId=${targets[0]}
 	targetName=`$plistBuddy -c "Print :objects:$targetId:name" "$projectFile"`
 	logit "【APP】名字：$targetName"
-
 
 }
 
@@ -489,57 +494,26 @@ function getBuildConfigurationId() {
 }
 
 function getAPPBundleId
-{
-	##根据configurationId来获取Bundle Id
-	appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	if [[ "$appBundleId" == '' ]]; then
-		errorExit "获取APP Bundle Id 是失败!!!"
+{	
+
+	content=`grep  "[ ]*PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*" "$xcconfigFile"`
+	newBundleId=`echo ${content#*=}` ##去掉前后空格
+	if [[ "$newBundleId" != '' ]]; then
+		appBundleId="$newBundleId"
+		logit "【APP】Bundle ID被重新指定为:$appBundleId"
+	else 
+		##根据configurationId来获取Bundle Id
+		appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+		if [[ "$appBundleId" == '' ]]; then
+			errorExit "获取APP Bundle Id 是失败!!!"
+		fi
+		logit "【APP】Bundle Id：$appBundleId"
 	fi
-	logit "【APP】Bundle Id：$appBundleId"
+
+
+
 
 }
-
-
-
-##获取根据configurationId下的BuildSetting 配置
-function showBuildSetting
-{
-	logitVerbose "======================查看当前Build Setting 配置======================"
-	configurationName=`$plistBuddy -c "Print :objects:$configurationId:name" "$projectFile"`
-	logit "【构建模式】(Debug/release): $configurationName"
-	# CODE_SIGN_ENTITLEMENTS 和 CODE_SIGN_RESOURCE_RULES_PATH 不一定存在，这里不做判断
-	# codeSignEntitlements=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_ENTITLEMENTS" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	# codeSignResourceRulePath=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_RESOURCE_RULES_PATH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	codeSignIdentity=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	codeSignIdentitySDK=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:CODE_SIGN_IDENTITY[sdk=iphoneos*]" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	developmentTeam=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:DEVELOPMENT_TEAM" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	iphoneosDeploymentTarget=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:IPHONEOS_DEPLOYMENT_TARGET" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	# onlyActiveArch=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ONLY_ACTIVE_ARCH" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	productBundleIdentifier=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	productName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_NAME" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	provisionProfileUuid=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	provisionProfileName=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PROVISIONING_PROFILE_SPECIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-
-	# logit "codeSignEntitlements:$codeSignEntitlements"
-	# logit "codeSignResourceRulePath:$codeSignResourceRulePath"
-
-	logit "【developmentTeam】:$developmentTeam"
-	logit "【info Plist 文件】:$infoPlistFile"
-	logit "【iphoneosDeploymentTarget】:$iphoneosDeploymentTarget"
-	# logit "【onlyActiveArch】:$onlyActiveArch"
-	logit "【BundleId】:$productBundleIdentifier"
-	logit "【productName】:$productName"
-	logit "【provisionProfileUuid】:$provisionProfileUuid"
-	logit "【provisionProfileName】:$provisionProfileName"
-	logit "【codeSignIdentity】:$codeSignIdentity"
-	logit "【codeSignIdentitySDK】:$codeSignIdentitySDK"
-
-}
-
-
-
-
 
 
 ##检查授权文件类型
@@ -573,16 +547,8 @@ function getProfileType
 }
 
 function setBundleId() {
-  if [[ "$newBundleId" != '' ]] && [[ "$newBundleId" != "$appBundleId" ]]; then
-  	## 设置configurationId下的bundle id
-	  $plistBuddy -c "Set :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $newBundleId" "$projectFile"
-	  if [[ $? -eq 0 ]]; then
-	    appBundleId=$newBundleId;
-	    logit "设置Bundle Id:$newBundleId"
-	  else
-	    errorExit "无法设置Bundle Id为:$newBundleId。"
-	  fi
-
+  if [[ "$newBundleId" != '' ]] ; then
+  	setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$newBundleId"
   fi
 }
 
@@ -607,21 +573,6 @@ function setBuildVersion
 
 }
 
-##配置证书身份和授权文件
-function configureSigningByRuby
-{
-	logitVerbose "========================配置签名身份和描述文件========================"
-	rbDir="$( cd "$( dirname "$0"  )" && pwd  )"
-	logit "xcodeProject:$xcodeProject"
-	logit "profileUuid:$profileUuid"
-	logit "profileName:$profileName"
-	logit "matchCodeSignIdentity:$matchCodeSignIdentity"
-	logit "profileTeamId:$profileTeamId"
-	ruby ${rbDir}/xceditor.rb "$xcodeProject" $profileUuid $profileName "$matchCodeSignIdentity"  $profileTeamId
-	if [[ $? -ne 0 ]]; then
-		errorExit "xceditor.rb 修改配置失败！！"
-	fi
-}
 
 
 ##设置生产环境或者
@@ -642,66 +593,6 @@ function setEnvironment
 			fi
 		fi
 	fi
-}
-
-
-
-function setDisableBitCode {
-
-	## 设置configurationId下的BitCode配置
-	ENABLE_BITCODE=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:ENABLE_BITCODE" "$projectFile" `
-	if [[ $? -ne 0 ]]; then
-		## 表示不存在，则添加
-		logit "签名方式】添加ENABLE_BITCODE"
-		$plistBuddy -c "Add :objects:$id:buildSettings:ENABLE_BITCODE bool NO" "$projectFile"
-	else 
-		if [[ "$ENABLE_BITCODE" == "YES" ]]; then
-	    $plistBuddy -c "Set :objects:$configurationId:buildSettings:ENABLE_BITCODE NO" "$projectFile"
-	    logit "【BitCode】设置Enable Bitcode ：NO"
-		fi
-	fi
-
-
-}
-
-##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
-function setManulSigning
-{
-
-	##在General 中的“Automatically manage sign”选项
-	ProvisioningStyle=`$plistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$projectFile"`
-	logit "【签名方式】General 中签名方式:$ProvisioningStyle"
-	if [[ "$ProvisioningStyle" != "Manual" ]]; then
-		##如果需要设置成自动签名,将Manual改成Automatic
-		$plistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$projectFile"
-		logit "【签名方式】设置签名方式为:Manual"
-	fi
-
-	##在Setting 中的“Code Signing Style”选项
-	if  versionCompareGE "$xcodeVersion" "9.0"; then
-		## 这里必须对Release 和Debug 同时进行设置，不然会签名失败
-		for id in ${buildConfigurations[@]}; do
-
-			## 设置configurationId下的签名
-			configurationName=`$plistBuddy -c "Print :objects:$id:name" "$projectFile"`
-			CODE_SIGN_STYLE=`$plistBuddy -c "Print :objects:$id:buildSettings:CODE_SIGN_STYLE" "$projectFile" `
-			if [[ $? -ne 0 ]]; then
-				## 表示不存在，则添加
-				logit "签名方式】添加CODE_SIGN_STYLE"
-				$plistBuddy -c "Add :objects:$id:buildSettings:CODE_SIGN_STYLE string Manual" "$projectFile"
-			fi
-			logit "【签名方式】Setting 中${configurationName} 模式下的签名方式:$CODE_SIGN_STYLE"
-			if [[ "$CODE_SIGN_STYLE" != "Manual" ]]; then
-				##如果需要设置成自动签名,将Manual改成Automatic
-				$plistBuddy -c "Set :objects:$id:buildSettings:CODE_SIGN_STYLE Manual" "$projectFile"
-				logit "【签名方式】设置Setting 中${configurationName} 模式下的签名方式为:Manual"
-			fi
-
-		done
-
-
-	fi
-
 }
 
 
@@ -735,7 +626,7 @@ function build
 	if [[ $isExistXcWorkspace == true ]]; then
 		cmd="$cmd"" -workspace \"$xcworkspace\""
 	fi
-	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $configuration clean build"
+	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $configuration -xcconfig $xcconfigFile clean build"
 
 	if [[ "$profileType" == "development" ]]; then
 		cmd="$cmd"" ARCHS=\"$arch\""
@@ -910,19 +801,20 @@ function renameAndBackup
 startDateSeconds=`date +%s`
 
 
-while getopts p:c:r:b:dxvhgtl option; do
+while getopts p:c:r:b:Bdxvhgtl  option; do
   case "${option}" in
+
     b) newBundleId=${OPTARG};;
   	g) getGitVersionCount;exit;;
     p) xcodeProject=${OPTARG};;
 	c) checkChannel ${OPTARG};;
 	t) productionEnvironment=false;;
-	l) showUsableCodeSign;exit;;
+	l ) showUsableCodeSign;exit;;
 	r) arch=${OPTARG};;
     x) set -x;;
 	d) debugConfiguration=true;;
     v) verbose=true;;
-    h | help) usage; exit;;
+    h ) usage; exit;;
 	* ) usage;exit;;
   esac
 done
@@ -931,11 +823,10 @@ done
 
 clean
 initConfiguration
+initXCconfig
 loginKeychainAccess
 checkForProjectFile
 checkIsExistWorkplace
-
-
 checkEnvironmentConfigureFile
 
 getXcodeVersion
@@ -944,23 +835,29 @@ getFirstTargets
 
 getConfigurationsIds
 getBuildConfigurationId
-getAPPBundleId
+
 setBundleId
+
+## 手动签名
+setXCconfigWithKeyValue "CODE_SIGN_STYLE" "Manual"
+## 关闭BitCode
+setXCconfigWithKeyValue "ENABLE_BITCODE" "NO"
+## 不生成调试文件
+setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "dwarf"
+
+getAPPBundleId
 autoMatchProvisionFile
 autoMatchCodeSignIdentity
 getGitVersionCount
-setDisableBitCode
-setManulSigning
+
 setEnvironment
 setBuildVersion
-configureSigningByRuby
-showBuildSetting
+
 podInstall
 build
 repairXcentFile
 checkIPA
 renameAndBackup
-
 endDateSeconds=`date +%s`
 
 logit "【构建时长】构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"

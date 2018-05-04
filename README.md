@@ -32,7 +32,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 - 自动匹配描述文件(Provisioning Profile)
 - 自动匹配签名身份(Code Signing Identity)
 - 兼容`单工程`和`多工程`(Workplace)项目
-- 只支持单个target
+- 自动关闭BitCode
 - 自动修改内部版本号(Build)
 - 可配置（接口）生产环境和开发环境
 - 可配置Bundle Id
@@ -57,15 +57,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 安装
 ==
 
-1. #### 安装Xcodeproj
-
-  `sudo gem install xcodeproj`
-
-2. #### 检查是否安装成功
-
-  ` xcodeproj --help`
-
-3. #### 安装xcpretty（可选）
+1. #### 安装xcpretty（可选）
   `sudo gem install xcpretty`
 
   用来格式化xcodebuild输出日志，建议安装
@@ -161,6 +153,11 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 ### 版本更新日志
 
 ```
+#--------------------------------------------
+# 2018/05/04
+# 版本：2.1.0
+# 1. 移除使用xcodepro（xceditor.rb）,使用xcodebuild 的`-xcconfig `参数来实现签名等配置修改
+# 2. 保持工程配置(project.pbxproj)文件不被修改
 #--------------------------------------------
 # 2018/04/19
 # 版本：2.0.6
