@@ -1075,6 +1075,8 @@ provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISI
 if [[ ! "$provisionFile" ]]; then
 	errorExit "不存在Bundle Id 为 ${projectBundleId} 且分发渠道为${CHANNEL}的授权文件，请检查${PROVISION_DIR}目录是否存在对应授权文件"
 fi
+##导入授权文件
+open "$provisionFile"
 ## 授权文件type对应的名字
 channelName=$(getProfileTypeCNName $CHANNEL)
 ## 获取授权文件的有效天数
