@@ -90,9 +90,12 @@ function historyBackup() {
 			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir/$name" ]]; then
 				continue;
 			fi
+
 			cp -rf "$Package_Dir/$name" "$Package_Dir/History"
 			rm -rf "$Package_Dir/$name"
 		done
+	else
+		mkdir -p "$Package_Dir/History"
 	fi
 }
 
@@ -118,7 +121,7 @@ function initBuildXcconfig() {
 
 function initUserXcconfig() {
 	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
-		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_VARVALUE  PROVISION_DIR)
+		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR)
 		for key in ${allKeys[@]}; do
 			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
 			# echo "===$value====="
@@ -141,7 +144,7 @@ function getXcconfigValue() {
 		exit 1
 	fi
 	## 去掉//开头 ;  查找key=特征
-	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*")
+	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | tail -1| cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*")
 	echo $value
 }
 
@@ -222,7 +225,7 @@ function generateOptionsPlist(){
 	</plist>\n
 	"
 	## 重定向
-	echo  -e "$plistfileContent" > "$Tmp_Options_Plist_File"
+	echo -e "$plistfileContent" > "$Tmp_Options_Plist_File"
 	echo "$Tmp_Options_Plist_File"
 }
 
@@ -383,14 +386,12 @@ function findIPAEnvFile () {
 	## 如果直接是全路径文件,直接返回
 	if [[ -f "$fileName" ]]; then
 		echo $fileName
-		return 
 	else
 		local apiEnvFile=`find "$Shell_Work_Path" -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$fileName" -print| head -n 1`
 		if [[ ! -f "$apiEnvFile" ]]; then
 			exit 1
 		fi
 		echo $apiEnvFile
-		return 
 	fi
 }
 
@@ -908,10 +909,6 @@ while [ "$1" != "" ]; do
             shift
             UNLOCK_KEYCHAIN_PWD="$1"
             ;;
-        -e| --api-environment )
-            shift
-            API_ENVIRONMENT="$1"
-            ;;
             
       	--enable-bitcode )
             ENABLE_BITCODE='YES'
@@ -1189,7 +1186,11 @@ rm -rf "$Package_Dir/DistributionSummary.plist"
 ## IPA和日志重命名
 logit "【IPA 信息】IPA和日志名字格式化..."
 exportDir=${exportPath%/*} 
-ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$apiEnvVarName" "$infoPlistFile" "$channelName")
+
+logit "=====${apiEnvFile}====${API_ENV_VARNAME}==="
+
+
+ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$channelName")
 mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
 mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"

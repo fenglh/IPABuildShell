@@ -93,7 +93,7 @@ user.xcconfig 文件说明
 //脚本全局参数配置文件(脚本参数优先于全局配置参数)
 
 
-//keychain解锁密码，即PC开机密码。通常只有在第一次执行脚本时候需要。相当于脚本参数 -p | --keychain-password  
+//keychain解锁密码，即PC开机密码。通常只有在第一次执行脚本时候需要。相当于脚本参数 -p | --keychain-password
 UNLOCK_KEYCHAIN_PWD =
 
 //构建模式：Debug/Release ；默认 Release。相当于脚本参数 -t | --configration-type
@@ -110,6 +110,15 @@ AUTO_BUILD_VERSION =
 
 //授权文件目录，默认在~/Library/MobileDevice/Provisioning Profiles。相当于脚本参数 -d | --provision-dir
 PROVISION_DIR=
+
+//例如在AppDelegate.h 声明变量 static BOOL isProduction = NO;来控制接口的生产环境和开发环境
+//指定配置接口生产环境的文件名。相当于脚本参数 --env-filename
+API_ENV_FILE_NAME =
+//指定配置接口生产环境的变量名。相当于脚本参数 --env-varname
+API_ENV_VARNAME =
+//指定配置接口生产环境的变量值：YES/NO 相当于脚本参数 --env-production
+API_ENV_PRODUCTION =
+
 
 
 ```
