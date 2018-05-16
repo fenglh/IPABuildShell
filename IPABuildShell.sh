@@ -1137,7 +1137,7 @@ unlockKeychain
 if [[ $? -eq 0 ]]; then
 	logit "【钥匙串 】unlock-keychain";
 else
-	logit "【钥匙串 】unlock-keychain 失败";
+	errorExit "unlock-keychain 失败, 请使用-p 参数或者在user.xcconfig配置文件中指定密码";
 fi
 
 
