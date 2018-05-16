@@ -1,141 +1,111 @@
 #!/bin/bash
 
+
 # ----------------------------------------------------------------------
 # name:         IPABuildShell.sh
-# version:      2.1.0
-# createTime:   2018-05-04
+# version:      3.0.0
+# createTime:   2018-05-16
 # description:  iOS 自动打包
 # author:       冯立海
 # email:        335418265@qq.com
 # github:       https://github.com/aa335418265/IPABuildShell
 # ----------------------------------------------------------------------
 
-
-backupDir=~/Desktop/PackageLog
-backupHistoryDir=~/Desktop/PackageLog/history/
-tmpLogFile=/tmp/`date +"%Y%m%d%H%M%S"`.txt
-plistBuddy="/usr/libexec/PlistBuddy"
-xcodebuild="/usr/bin/xcodebuild"
-security="/usr/bin/security"
-codesign="/usr/bin/codesign"
-xcconfigFile="/tmp/build.xcconfig"
-pod=`which pod`
-
-ruby="/usr/bin/ruby"
-lipo="/usr/bin/lipo"
-currentShellDir="$( cd "$( dirname "$0"  )" && pwd  )"
-channel='development'
-verbose=true
-productionEnvironment=true
-debugConfiguration=false
-arch='arm64'
+CMD_PlistBuddy="/usr/libexec/PlistBuddy"
+CMD_Xcodebuild=$(which xcodebuild)
+CMD_Security=$(which security)
+CMD_Lipo=$(which lipo)
+CMD_Codesign=$(which codesign)
 
 
+##历史备份目录
+Package_Dir=~/Desktop/PackageLog
 
-##大于等于
-function versionCompareGE() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
 
-##初始化配置：bundle identifier 和 code signing identity
+##脚本工作目录
+Shell_Work_Path=$(pwd)
+##脚本文件目录
+Shell_File_Path=$(cd `dirname $0`; pwd)
+## 用户配置
+Shell_User_Xcconfig_File="$Shell_File_Path/user.xcconfig"
+## 脚本临时生成最终用于构建的配置
+Tmp_Build_Xcconfig_File="$Package_Dir/build.xcconfig"
+Tmp_Log_File="$Package_Dir/`date +"%Y%m%d%H%M%S"`.txt"
+##临时文件目录
+Tmp_Options_Plist_File="$Package_Dir/optionsplist.plist"
 
+
+#############################################基本功能#############################################
+
+function usage
+{
+	# setAliasShortCut
+	echo ""
+	echo "Usage:$(basename $0) -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ..."
+	echo "可选项："
+	echo "  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
+  	echo "  -b | --bundle-id bundleId 			设置Bundle Id"
+  	echo "  -c | --channel <development|app-store|enterprise> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发"
+	echo "  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
+	echo "  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码"
+	echo "  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式"
+	echo "  -h | --help					帮助."
+	echo "  -x 						脚本执行调试模式."
+
+	echo "  --enable-bitcode <YES/NO> 			是否开启BitCode."
+	echo "  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）"
+
+	exit 0
+}
+
+
+## 日志格式化输出
+function logit() {
+    echo -e "\033[32m [IPABuildShell] \033[0m $@"
+    echo "$@" >> "$Tmp_Log_File"
+}
+
+## 日志格式化输出
 function errorExit(){
-    endDateSeconds=`date +%s`
-    logit "构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
-    echo -e "\033[31m \n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m"
-    echo -e "\033[31m \t打包失败! 原因：$@ \033[0m"
-    echo -e "\033[31m \n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\033[0m"
+
+    echo -e "\033[31m【IPA构建失败】$@ \033[0m"
     exit 1
 }
 
-function logit() {
-    if [ $verbose == true ]; then
-        echo -e "\033[32m [IPABuildShell] \033[0m $@"
-    fi
-    echo "	>> $@" >> $tmpLogFile
+## 日志格式化输出
+function warning(){
+
+    echo -e "\033[33m【警告】$@ \033[0m"
 }
 
-function logitVerbose
-{
-    echo -e "\033[36m $@ \033[0m"
+##字符串版本号比较：大于等于
+function versionCompareGE() { test "$(echo "$@" | tr " " "\n" | sort -rn | head -n 1)" == "$1"; }
 
-    echo "	>> $@" >> $tmpLogFile
-}
+## 备份历史数据
+function historyBackup() {
 
-
-
-
-function profileTypeToName
-{
-    profileType=$1
-    if [[ "$profileType" == 'app-store' ]]; then
-        profileTypeName='商店分发'
-    elif [[ "$profileType" == 'enterprise' ]]; then
-        profileTypeName='企业分发'
-    else
-        profileTypeName='内部测试'
-    fi
-
-}
-
-
-
-
-function initConfiguration() {
-	configPlist=$currentShellDir/config.plist
-	if [ ! -f "$configPlist" ];then
-			errorExit "找不到配置文件：$configPlist"
-	fi
-
-	environmentConfigFileName=`$plistBuddy -c 'Print :InterfaceEnvironmentConfig:EnvironmentConfigFileName' $configPlist`
-	environmentConfigVariableName=`$plistBuddy -c 'Print :InterfaceEnvironmentConfig:EnvironmentConfigVariableName' $configPlist`
-	loginPwd=`$plistBuddy -c 'Print :LoginPwd' $configPlist`
-	devCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:devCodeSignIdentity' $configPlist`
-	disCodeSignIdentityForPersion=`$plistBuddy -c 'Print :Individual:disCodeSignIdentity' $configPlist`
-	devCodeSignIdentityForEnterprise=`$plistBuddy -c 'Print :Enterprise:devCodeSignIdentity' $configPlist`
-	disCodeSignIdentityForEnterprise=`$plistBuddy -c 'Print :Enterprise:disCodeSignIdentity' $configPlist`
-	bundleIdsForPersion=`$plistBuddy -c 'Print :Individual:bundleIdentifiers' $configPlist`
-	bundleIdsForEnterprise=`$plistBuddy -c 'Print :Enterprise:bundleIdentifiers' $configPlist`
-}
-
-function clean
-{
-	if [[ -d "$backupDir" ]]; then
-		for file in `ls $backupDir` ; do
-		logit "【备份】备份上一次打包结果到History文件夹：$file"
-		if [[ "$file" != 'History' ]]; then
-			if [[ ! -f "$backupDir/$file" ]]; then
+		## 备份上一次的打包数据
+	if [[ -d "$Package_Dir" ]]; then
+		for name in `ls $Package_Dir` ; do
+			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir/$name" ]]; then
 				continue;
 			fi
-			mv -f $backupDir/$file $backupHistoryDir
-			if [[ $? -ne 0 ]]; then
-				errorExit "备份历史文件失败!"
-			fi
-		fi
-	done
-	fi
-
-}
-
-##登录keychain授权
-function loginKeychainAccess
-{
-
-	#允许访问证书
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain" 2>/tmp/log.txt
-	if [[ $? -ne 0 ]]; then
-		errorExit "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-
-	fi
-	$security unlock-keychain -p $loginPwd "$HOME/Library/Keychains/login.keychain-db" 2>/tmp/log.txt
-		if [[ $? -ne 0 ]]; then
-		errorExit "security unlock-keychain 失败!请检查脚本配置密码是否正确"
-
+			cp -rf "$Package_Dir/$name" "$Package_Dir/History"
+			rm -rf "$Package_Dir/$name"
+		done
 	fi
 }
 
 
+## 获取xcpretty安装路径
+function getXcprettyPath() {
+	xcprettyPath=$(which xcpretty)
+	echo $xcprettyPath
+}
 
-function initXCconfig {
-	logit "【XCconfig 配置】初始化xcconfig文件"
+## 初始化build.xcconfig配置文件
+function initBuildXcconfig() {
+	local xcconfigFile=$Tmp_Build_Xcconfig_File
 	if [[ -f "$xcconfigFile" ]]; then
 		## 清空
 		> "$xcconfigFile"
@@ -143,388 +113,539 @@ function initXCconfig {
 		## 生成文件
 		touch "$xcconfigFile"
 	fi
+	echo $xcconfigFile
 }
 
-function setXCconfigWithKeyValue {
+function initUserXcconfig() {
+	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
+		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_VARVALUE  PROVISION_DIR)
+		for key in ${allKeys[@]}; do
+			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
+			# echo "===$value====="
+			if [[ "$value" ]]; then
+				eval "$key"='$value'
+				logit "【初始化用户配置】${key} = `eval echo "$value"`"
+			fi
 
-	key="$1"
-	value="$2"
-	if [[ "$key" == '' ]] || [[ "$value" == '' ]]; then
-		errorExit  "函数调用出错：setXCconfigWithKeyValue 必须传入两个参数"
+		done
 	fi
-	
+
+
+
+}
+
+function getXcconfigValue() {
+	local xcconfigFile=$1
+	local key=$2
+	if [[ ! -f "$xcconfigFile" ]]; then
+		exit 1
+	fi
+	## 去掉//开头 ;  查找key=特征
+	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*")
+	echo $value
+}
+
+## 解锁keychain
+function unlockKeychain(){
+	$CMD_Security unlock-keychain -p "$UNLOCK_KEYCHAIN_PWD" "$HOME/Library/Keychains/login.keychain" 2>/dev/null
+	if [[ $? -ne 0 ]]; then
+		return 1
+	fi
+	$CMD_Security unlock-keychain -p "$UNLOCK_KEYCHAIN_PWD" "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null
+	if [[ $? -ne 0 ]]; then
+		return 1
+	fi
+	return 0
+}
+
+## 添加一项配置
+function setXCconfigWithKeyValue() {
+
+	local key=$1
+	local value=$2
+
+	local xcconfigFile=$Tmp_Build_Xcconfig_File
+	if [[ ! -f "$xcconfigFile" ]]; then
+		exit 1
+	fi
+
 	if grep -q "[ ]*$key[ ]*=.*" "$xcconfigFile";then 
 		## 进行替换
 		sed -i "_bak" "s/[ ]*$key[ ]*=.*/$key = $value/g" "$xcconfigFile"
-		logit "【XCconfig 配置】更新配置：$key = $value"
 	else 
 		## 进行追加(重定位)
 		echo "$key = $value" >>"$xcconfigFile"
-		logit "【XCconfig 配置】添加配置：$key = $value"
 	fi
+}
+
+##获取Xcode 版本
+function getXcodeVersion() {
+	local xcodeVersion=`$CMD_Xcodebuild -version | head -1 | cut -d " " -f 2`
+	echo $xcodeVersion
 }
 
 
 ##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
-function generateOptionsPlist
-{
-	teamId=$1
-	method=$2
-	appBundleId=$3
-	profileName=$4
-	plistfileContent="
+function generateOptionsPlist(){
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
+	fi
+
+	local provisionFileTeamID=$(getProvisionfileTeamID "$provisionFile")
+	local provisionFileType=$(getProfileType "$provisionFile")
+	local provisionFileName=$(getProvisionfileName "$provisionFile")
+	local provisionFileBundleID=$(getProfileBundleId "$provisionFile")
+	local compileBitcode='<false/>'
+	if [[ "$ENABLE_BITCODE" == 'YES' ]]; then
+		compileBitcode='<true/>'
+	fi
+
+
+	local plistfileContent="
 	<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n
 	<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n
 	<plist version=\"1.0\">\n
 	<dict>\n
 	<key>teamID</key>\n
-	<string>$teamId</string>\n
+	<string>$provisionFileTeamID</string>\n
 	<key>method</key>\n
-	<string>$method</string>\n
+	<string>$provisionFileType</string>\n
 	<key>provisioningProfiles</key>\n
     <dict>\n
-        <key>$appBundleId</key>\n
-        <string>$profileName</string>\n
+        <key>$provisionFileBundleID</key>\n
+        <string>$provisionFileName</string>\n
     </dict>\n
 	<key>compileBitcode</key>\n
-	<false/>\n
+	$compileBitcode\n
 	</dict>\n
 	</plist>\n
 	"
-	echo -e $plistfileContent > /tmp/optionsplist.plist
+	## 重定向
+	echo  -e "$plistfileContent" > "$Tmp_Options_Plist_File"
+	echo "$Tmp_Options_Plist_File"
 }
 
+##检查xcodeproj 是否存在
+function checkXcodeprojExist() {
 
-###检查输入的分发渠道
-function checkChannel
-{
-	OPTARG=$1
-	if [[ "$OPTARG" != "development" ]] && [[ "$OPTARG" != "app-store" ]] && [[ "$OPTARG" != "enterprise" ]]; then
-		logit "-c 参数不能配置值：$OPTARG"
-		usage
+	local xcodeprojPath=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name "*.xcodeproj")
+	if [[ ! -d "$xcodeprojPath" ]]; then
 		exit 1
 	fi
-	channel=${OPTARG}
-
+	echo  $xcodeprojPath
 }
 
+##检查xcworkspace 是否存在
+function getXcworkspace() {
 
-
-
-function usage
-{
-	# setAliasShortCut
-	echo ""
-	echo "  -p <Xcode Project File>: 指定Xcode project. 否则，脚本会在当前执行目录中查找Xcode Project 文件"
-	echo "  -g: 获取当前项目git的版本数量"
-	echo "  -l: 列举可用的codeSign identity."
-	echo "  -x: 脚本执行调试模式."
-  	echo "  -b: 设置Bundle Id."
-	echo "  -d: 设置debug模式，默认release模式."
-	echo "  -t: 设置为测试(开发)环境，默认为生产环境."
-	echo "  -c <development|app-store|enterprise>: development 内部分发，app-store商店分发，enterprise企业分发"
-	echo "  -r <体系结构> 例如：-r 'armv7'或者 -r 'arm64' 或者 -r 'armv7 arm64' 等"
-	echo "  -h: 帮助."
-}
-
-##显示可用的签名
-function showUsableCodeSign
-{
-	#先输出签名，再将输出的结果空格' '替换成'#',并赋值给数组。（因为数组的分隔符是空格' '）
-	signList=(`$security find-identity -p codesigning -v | awk -F '"' '{print $2}' | tr -s '\n' | tr -s ' ' '#'`)
-	for (( i = 0; i < ${#signList[@]}; i++ )); do
-		usableCodeSign=`echo ${signList[$i]} | tr '#' ' '`
-		usableCodeSignList[$i]=$usableCodeSign
-	done
-	#打印签名
-	for (( i = 0; i < ${#usableCodeSignList[@]}; i++ )); do
-		logit "${usableCodeSignList[$i]}"
-	done
-}
-
-function getXcodeVersion {
-	xcodeVersion=`$xcodebuild -version | head -1 | cut -d " " -f 2`
-}
-
-
-
-##检查xcode project
-function checkForProjectFile
-{
-
-	##如果没有指定xcode项目，那么自行在当前目录寻找
-	if [[ "$xcodeProject" == '' ]]; then
-		pwd=`pwd`
-		xcodeProject=`find "$pwd" -maxdepth 1  -type d -name "*.xcodeproj"`
-	fi
-
-	projectExtension=`basename "$xcodeProject" | cut -d'.' -f2`
-	if [[ "$projectExtension" != "xcodeproj" ]]; then
-		errorExit "Xcode project 应该带有.xcodeproj文件扩展，.${projectExtension}不是一个Xcode project扩展！"
-	else
-		projectFile="$xcodeProject/project.pbxproj"
-		if [[ ! -f "$projectFile" ]]; then
-			errorExit "项目文件:\"$projectFile\" 不存在"
-		fi
-		logit "【检查】发现pbxproj:\"$projectFile\""
-	fi
-}
-
-
-
-
-##检查是否存在workplace,当前只能通过遍历的方法来查找
-function checkIsExistWorkplace
-{
-	xcworkspace=`find "$xcodeProject/.." -maxdepth 1  -type d -name "*.xcworkspace"`
+	local xcworkspace=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name "*.xcworkspace")
 	if [[ -d "$xcworkspace" ]]; then
-		isExistXcWorkspace=true
-		logit "【检查】发现xcworkspace:$xcworkspace"
+		echo $xcworkspace
+	fi
+}
+
+##检查podfile是否存在
+function  checkPodfileExist() {
+
+	local podfile=$(find "$Shell_Work_Path" -maxdepth 1  -type f -name "Podfile")
+	if [[ ! -f "$podfile" ]]; then
+		exit 1
+	fi
+	echo $podfile
+}
+
+
+function getProjectVersion() {
+	local infoPlistFile=$1
+	if [[ ! -f "$infoPlistFile" ]]; then
+		exit 1
+	fi
+	local projectVersion=$($CMD_PlistBuddy -c "Print :CFBundleShortVersionString"  "$infoPlistFile")
+
+	echo $projectVersion
+}
+function getBuildVersion() {
+	local infoPlistFile=$1
+	if [[ ! -f "$infoPlistFile" ]]; then
+		exit 1
+	fi
+	local projectVersion=$($CMD_PlistBuddy -c "Print :CFBundleVersion"  "$infoPlistFile")
+
+	echo $projectVersion
+}
+
+## 获取git仓库版本数量
+function getGitRepositoryVersionNumbers (){
+		## 是否存在.git目录
+	local gitRepository=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name ".git")
+	if [[ ! -d "$gitRepository" ]]; then
+		exit 1
+	fi
+
+	local gitRepositoryVersionNumbers=$(git -C "$Shell_Work_Path" rev-list HEAD 2>/dev/null | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*")
+	if [[ $? -ne 0 ]]; then
+		## 可能是git只有在本地，而没有提交到服务器,或者没有网络
+		exit 1
+	fi
+	echo $gitRepositoryVersionNumbers
+}
+
+#设置Info.plist文件的构建版本号
+function setBuildVersion () {
+	local infoPlistFile=$1
+	local buildVersion=$2
+	if [[ ! -f "$infoPlistFile" ]]; then
+		exit 1
+	fi
+	$CMD_PlistBuddy -c "Set :CFBundleVersion $buildVersion" "$infoPlistFile"
+}
+
+function finalIPAName ()
+{
+
+	local targetName=$1
+	local apiEnvFile=$2
+	local apiEnvVarName=$3
+	local infoPlistFile=$4
+	local channelName=$5
+
+	if [[ ! -f "$infoPlistFile" ]]; then
+		return;
+	fi
+		## IPA和日志重命名
+	local curDatte=`date +"%Y%m%d_%H%M%S"`
+	local ipaName=${targetName}_${curDatte}
+	local apiEnvValue=$(getIPAEnvValue "$apiEnvFile" "$apiEnvVarName")
+	local projectVersion=$(getProjectVersion "$infoPlistFile")
+	local buildVersion=$(getBuildVersion "$infoPlistFile")
+
+
+
+	if [[ "$apiEnvValue" ]]; then
+		local apiEnvName=''
+		if [[ "$apiEnvValue" == 'YES' ]]; then
+			apiEnvName='生产环境'
+		elif [[ "$apiEnvValue" == 'NO' ]]; then
+			apiEnvName='开发环境'
+		else
+			apiEnvName='未知环境'
+		fi
+		ipaName="$ipaName""_${apiEnvName}"
+	fi
+	ipaName="${ipaName}""_${channelName}""_${projectVersion}""(${buildVersion})"
+	echo "$ipaName"
+}
+
+
+##获取签名方式,##设置手动签名,即不勾选：Xcode -> General -> Signing -> Automatically manage signning
+## 在xcode 9之前（不包含9），只有在General这里配置是否手动签名，在xcode9之后，多加了一项在setting中
+function getCodeSigningStyle ()
+{
+
+	local pbxproj=$1/project.pbxproj
+	local targetId=$2
+	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+	##没有勾选过Automatically manage signning时，则不存在ProvisioningStyle
+	signingStyle=$($CMD_PlistBuddy -c "Print :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle " "$pbxproj" 2>/dev/null)
+	echo $signingStyle
+
+}
+
+##设置签名方式（手动/自动）
+function setManulCodeSigning ()
+{
+	local pbxproj=$1/project.pbxproj
+	local targetId=$2
+	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
+	##如果需要设置成自动签名,将Manual改成Automatic
+	$CMD_PlistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$pbxproj"
+}
+
+function addManulCodeSigning ()
+{
+	local pbxproj=$1/project.pbxproj
+	local targetId=$2
+	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
+	##如果需要设置成自动签名,将Manual改成Automatic
+	$CMD_PlistBuddy -c "Add :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle string Manual" "$pbxproj"
+}
+
+
+#获取,会在当前脚本执行目录以及5级内的子目录下自动寻找
+
+function findIPAEnvFile () {
+
+	local fileName=$1
+	## 如果直接是全路径文件,直接返回
+	if [[ -f "$fileName" ]]; then
+		echo $fileName
+		return 
 	else
-		isExistXcWorkspace=false;
+		local apiEnvFile=`find "$Shell_Work_Path" -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$fileName" -print| head -n 1`
+		if [[ ! -f "$apiEnvFile" ]]; then
+			exit 1
+		fi
+		echo $apiEnvFile
+		return 
 	fi
 }
 
-function  podInstall
-{
-	podfile=`find "$xcodeProject/.." -maxdepth 1  -type f -name "Podfile"`
-	if [[ -f "$podfile" ]]; then
-		logit "pod install"
-		$pod install
+## 获取接口环境的值
+function getIPAEnvValue () {
+	local apiEnvFile=$1
+	local apiEnvVarName=$2
+
+	if [[ ! -f "$apiEnvFile" ]]; then
+		exit 1
 	fi
+	local apiEnvValue=$(grep "$apiEnvVarName" "$apiEnvFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
+	echo $apiEnvValue
 }
 
-##检查配置文件
-function checkEnvironmentConfigureFile
-{
-	environmentConfigureFile=`find "$xcodeProject/.." -maxdepth 5 -path "./.Trash" -prune -o -type f -name "$environmentConfigFileName" -print| head -n 1`
-	if [[ ! -f "$environmentConfigureFile" ]]; then
-		haveConfigureEnvironment=false;
-		#logit "接口环境配置文件${environmentConfigFileName}不存在,忽略接口生产/开发环境配置"
-	else
-		haveConfigureEnvironment=true;
-		logit "【检查】发现接口环境配置文件:${environmentConfigureFile}"
+function setIPAEnvFile () {
+	local apiEnvFile=$1
+	local apiEnvVarName=$2
+	local apiEnvVarValue=$3
+
+	if [[ ! -f "$apiEnvFile" ]]; then
+		exit 1
 	fi
+	sed -i ".bak" "/[ ]*$apiEnvVarName[ ]*=/s/=.*/= $apiEnvVarValue;\/\/脚本自动设置/" "$apiEnvFile" && rm -rf ${apiEnvFile}.bak
 }
-
-function getEnvirionment
-{
-	if [[ $haveConfigureEnvironment == true ]]; then
-		environmentValue=$(grep "$environmentConfigVariableName" "$environmentConfigureFile" | grep -v '^//' | cut -d ";" -f 1 | cut -d "=" -f 2 | sed 's/^[ \t]*//g' | sed 's/[ \t]*$//g')
-		currentEnvironmentValue=$environmentValue
-		logit "【接口环境配置】当前接口配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
-	fi
-
-
-}
-
-
-##获取git版本数量
-function getGitVersionCount
-{
-	## 是否存在.git目录
-	if [[ -d ".git" ]]; then
-		gitVersionCount=`git -C "$xcodeProject" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
-		logit "【版本数量】$gitVersionCount"
-	fi
-
-}
-
-##根据授权文件，自动匹配授权文件和签名身份
-
-
 
 ##获取授权文件过期天数
-function getProvisionfileExpirationDays
+function getProvisionfileExpirationDays()
 {
-    mobileProvisionFile=$1
+    local provisionFile=$1
 
+    if [[ ! -f "$provisionFile" ]]; then
+    	exit 1
+    fi
     ##切换到英文环境，不然无法转换成时间戳
     export LANG="en_US.UTF-8"
     ##获取授权文件的过期时间
-    profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-    profileExpirationTimestamp=`date -j -f "%a %b %d  %T %Z %Y" "$profileExpirationDate" "+%s"`
-    nowTimestamp=`date +%s`
-    r=$[profileExpirationTimestamp-nowTimestamp]
-    expirationDays=$[r/60/60/24]
+    local profileExpirationDate=$($CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+    local profileExpirationTimestamp=$(date -j -f "%a %b %d  %T %Z %Y" "$profileExpirationDate" "+%s")
+    local nowTimestamp=`date +%s`
+    local r=$[profileExpirationTimestamp-nowTimestamp]
+    local expirationDays=$[r/60/60/24]
+    echo $expirationDays
 }
 
-function autoMatchProvisionFile
+## 获取授权文件UUID
+function getProvisionfileUUID()
 {
-	##授权文件默认放置在和脚本同一个目录下的MobileProvisionFile 文件夹中
-	mobileProvisionFileDir="$( cd "$( dirname "$0"  )" && pwd  )/MobileProvisionFile"
-	if [[ ! -d "$mobileProvisionFileDir" ]]; then
-		errorExit "授权文件目录${mobileProvisionFileDir}不存在！"
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
 	fi
-
-	matchMobileProvisionFile=''
-	for file in ${mobileProvisionFileDir}/*.mobileprovision; do
-		provisionFileBundleId=`$plistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< $($security cms -D -i "$file" 2>/tmp/log.txt )`
-		##截取到第一个.号后面的字符串
-		provisionFileBundleId=${provisionFileBundleId#*.}
-		if [[ "$appBundleId" == "$provisionFileBundleId" ]]; then
-			getProfileType $file
-			if [[ "$profileType" == "$channel" ]]; then
-				matchMobileProvisionFile=$file
-				logit "【授权文件】匹配到授权文件：${provisionFileBundleId}，路径：$file"
-                profileTypeToName "${channel}"
-                logit "【授权文件】分发渠道：$profileTypeName"
-				break
-			fi
-		fi
-	done
-
-	if [[ $matchMobileProvisionFile == '' ]]; then
-        profileTypeToName "${channel}"
-		errorExit "无法匹配${appBundleId} 分发渠道为【${profileTypeName}】的授权文件,请检查是否添加授权文件到MobileProvisionFile目录了?"
-	fi
-
-    ##企业分发，那么检查授权文件有效期
-    if [[ "$channel" == 'enterprise' ]];then
-        getProvisionfileExpirationDays "$matchMobileProvisionFile"
-        logit "【授权文件】授权文件有效时长：${expirationDays} 天";
-        if [[ $expirationDays -lt 0 ]];then
-            profileExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
-            errorExit "授权文件已经过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate}, 过期天数：${expirationDays#-} 天"
-        elif [[ $expirationDays -le 90 ]];then
-            errorExit "授权文件即将过期, 请联系开发人员更换授权文件! 有效日期:${profileExpirationDate} ,剩余天数：${expirationDays} 天"
-        fi
-    fi
-
-
-	##获取授权文件uuid、name、teamId
-	profileUuid=`$plistBuddy -c 'Print :UUID' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
-	profileName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
-	profileTeamId=`$plistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($security cms -D -i "$matchMobileProvisionFile" 2>/tmp/log.txt)`
-	if [[ "$profileUuid" == '' ]]; then
-		errorExit "profileUuid=$profileUuid, 获取参数配置Profile的uuid失败!"
-	fi
-	if [[ "$profileName" == '' ]]; then
-		errorExit "profileName=$profileName, 获取参数配置Profile的name失败!"
-	fi
-
-
-	setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$profileName"
-	setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$profileUuid"
-	setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$profileTeamId"
-
-	# logit "【授权文件】名字：${profileName}"
-	# logit "【授权文件】UUID：$profileUuid"
-	# logit "【授权文件】TeamId：$profileTeamId"
-
+	provisonfileUUID=$($CMD_PlistBuddy -c 'Print :UUID' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+	echo $provisonfileUUID
 }
 
-function autoMatchCodeSignIdentity
+## 获取授权文件TeamID
+function getProvisionfileTeamID()
 {
-
-	matchCodeSignIdentity=''
-
-
-	if [[ "$channel" == 'development' ]]; then
-		##在个人账号中
-		if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
-			matchCodeSignIdentity=$devCodeSignIdentityForPersion
-		elif [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
-			matchCodeSignIdentity=$devCodeSignIdentityForEnterprise
-		else
-			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
-		fi
-	elif [[ "$channel" == 'app-store' ]]; then
-		if [[ "${bundleIdsForPersion[@]}" =~ "$appBundleId" ]]; then
-			matchCodeSignIdentity=$disCodeSignIdentityForPersion
-		else
-			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
-		fi
-	elif [[ "$channel" == 'enterprise' ]]; then
-		if [[ "${bundleIdsForEnterprise[@]}" =~ "$appBundleId" ]]; then
-			matchCodeSignIdentity=$disCodeSignIdentityForEnterprise
-		else
-			errorExit "${appBundleId}无法匹配分发方式为:${channel} 的签名"
-		fi
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
 	fi
-	
+	provisonfileTeamID=$($CMD_PlistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+	echo $provisonfileTeamID
+}
 
-	# logit "【签名】匹配到签名:$matchCodeSignIdentity"
-	setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$matchCodeSignIdentity"
+## 获取授权文件名称
+function getProvisionfileName()
+{
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
+	fi
+	provisonfileName=$($CMD_PlistBuddy -c 'Print :Name' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+	echo $provisonfileName
+}
 
+
+##这里只取第一个target id
+function getBuildTargetId()
+{
+	local pbxproj=$1/project.pbxproj
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
+	local targetList=$($CMD_PlistBuddy -c "Print :objects:${rootObject}:targets" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+	#括号用于初始化数组,例如arr=(1,2,3),括号用于初始化数组,例如arr=(1,2,3)
+	local targets=($(echo $targetList));
+	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
+	local targetId=${targets[0]}
+	echo $targetId
 }
 
 ##这里只取第一个target
-function getFirstTargets
+function getTargetName()
 {
-	rootObject=`$plistBuddy -c "Print :rootObject" "$projectFile"`
-	targetList=`$plistBuddy -c "Print :objects:${rootObject}:targets" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	targets=(`echo $targetList`);#括号用于初始化数组,例如arr=(1,2,3)
-	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
-	targetId=${targets[0]}
-	targetName=`$plistBuddy -c "Print :objects:$targetId:name" "$projectFile"`
-	logit "【APP】名字：$targetName"
-
-}
-
-#### 即release和debug 模式对应的id
-function getConfigurationsIds() {
-  buildConfigurationListId=`$plistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$projectFile"`
-  buildConfigurationList=`$plistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-  ##数组中存放的分别是release和debug对应的id
-  buildConfigurations=(`echo $buildConfigurationList`)
+	local pbxproj=$1/project.pbxproj
+	local targetId=$2
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+	local targetName=$($CMD_PlistBuddy -c "Print :objects:$targetId:name" "$pbxproj")
+	echo $targetName
 }
 
 
-## 根据debugConfiguration变量指定构建时的配置模式是Debug还是Release来获取对应的configurationId
-## 在xcode项目的project.pbxproj配置文件中，Release模式和Debug模式下的配置是分别保存在不同地方的，所以这里先获取当前需要构建的模式
-function getBuildConfigurationId() {
+## 获取配置ID,主要是后续用了获取bundle id
+function getConfigurationIds() {
 
-	if [[ $debugConfiguration == true ]]; then
-		name="Debug"
-	else
-		name="Release"
+	##配置模式：Debug 或 Release
+	local targetId=$2
+	local pbxproj=$1/project.pbxproj
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+  	local buildConfigurationListId=$($CMD_PlistBuddy -c "Print :objects:$targetId:buildConfigurationList" "$pbxproj")
+  	local buildConfigurationList=$($CMD_PlistBuddy -c "Print :objects:$buildConfigurationListId:buildConfigurations" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+  	##数组中存放的分别是release和debug对应的id
+  	local configurationTypeIds=$(echo $buildConfigurationList)
+  	echo $configurationTypeIds
+
+}
+
+function getConfigurationIdWithType(){
+
+	local configrationType=$3
+	local targetId=$2
+	local pbxproj=$1/project.pbxproj
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
 	fi
 
-	for id in ${buildConfigurations[@]}; do
-		configurationName=`$plistBuddy -c "Print :objects:$id:name" "$projectFile"`
-		if [[ "$configurationName" == "$name" ]]; then
-			configurationId=$id
-		fi
+	local configurationTypeIds=$(getConfigurationIds "$1" $targetId)
+	for id in ${configurationTypeIds[@]}; do
+	local name=$($CMD_PlistBuddy -c "Print :objects:$id:name" "$pbxproj")
+	if [[ "$configrationType" == "$name" ]]; then
+		echo $id
+	fi
 	done
-
-	logit "【构建模式】构建模式:$name"
-
-	
 }
 
-function getAPPBundleId
+function getInfoPlistFile()
+{
+	configurationId=$2
+	local pbxproj=$1/project.pbxproj
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+   local  infoPlistFileName=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+	  ### 完整路径
+	infoPlistFilePath="$1/../$infoPlistFileName"
+	echo $infoPlistFilePath
+}
+
+
+## 获取bundle Id,分为Releae和Debug
+function getProjectBundleId()
+{	
+	local configurationId=$2
+	local pbxproj=$1/project.pbxproj
+	if [[ ! -f "$pbxproj" ]]; then
+		exit 1
+	fi
+	local bundleId=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+	echo $bundleId
+}
+
+
+##匹配签名身份
+function matchCodeSignIdentity()
+{
+	local provisionFile=$1
+	local channel=$2
+	local channelFilterString=''
+	local startSearchString=''
+	local endSearchString='1\\0230\\021\\006\\003U\\004'
+
+
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1;
+	fi
+
+	if [[ "$channel" == 'enterprise' ]] || [[ "$channel" == 'app-store' ]]; then
+		channelFilterString='iPhone Distribution: '
+		startSearchString='003U\\004\\003\\0142'
+	else
+		channelFilterString='iPhone Developer: '
+		startSearchString='003U\\004\\003\\014&'
+	fi
+	profileTeamId=$($CMD_PlistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+	codeSignIdentity=$($CMD_Security dump-keychain 2>/dev/null | grep "\"subj\"<blob>=" | cut -d '=' -f 2 | grep "$profileTeamId" | awk -F "[\"\"]" '{print $2}' | grep "$channelFilterString" | sed "s/\(.*\)$startSearchString\(.*\)$endSearchString\(.*\)/\2/g" | head -n 1)
+	echo "$codeSignIdentity"
+}
+
+##匹配授权文件
+function matchMobileProvisionFile()
 {	
 
-	content=`grep  "[ ]*PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*" "$xcconfigFile"`
-	newBundleId=`echo ${content#*=}` ##去掉前后空格
-	if [[ "$newBundleId" != '' ]]; then
-		appBundleId="$newBundleId"
-		logit "【APP】Bundle ID被重新指定为:$appBundleId"
-	else 
-		##根据configurationId来获取Bundle Id
-		appBundleId=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:PRODUCT_BUNDLE_IDENTIFIER" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-		if [[ "$appBundleId" == '' ]]; then
-			errorExit "获取APP Bundle Id 是失败!!!"
-		fi
-		logit "【APP】Bundle Id：$appBundleId"
+	##分发渠道
+	local channel=$1
+	local appBundleId=$2
+	##授权文件目录
+	local mobileProvisionFileDir=$3
+	if [[ ! -d "$mobileProvisionFileDir" ]]; then
+		exit 1
 	fi
+	##遍历
+	local provisionFile=''
+	local provisionFileExpirationDays=0
 
-
-
-
+	for file in "${mobileProvisionFileDir}"/*.mobileprovision; do
+		local bundleIdFromProvisionFile=$(getProfileBundleId "$file")
+		if [[ "$bundleIdFromProvisionFile" ]] && [[ "$appBundleId" == "$bundleIdFromProvisionFile" ]]; then
+			local profileType=$(getProfileType "$file")
+			if [[ "$profileType" == "$channel" ]]; then
+				local expirationDays=$(getProvisionfileExpirationDays "$file")
+				## 匹配到有效天数最大的授权文件
+				if [[ $expirationDays -gt $provisionFileExpirationDays ]]; then
+					provisionFile=$file
+					provisionFileExpirationDays=$expirationDays
+				fi
+			fi
+		fi
+	done
+	echo $provisionFile
 }
 
 
-##检查授权文件类型
-function getProfileType
+
+function getProfileBundleId()
 {
-	profile=$1
-	# provisionedDevices=`$plistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< $($security cms -D -i "$profile"  ) | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
+	local profile=$1
+	local applicationIdentifier=$($CMD_PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< "$($CMD_Security cms -D -i "$profile" 2>/dev/null )")
+	if [[ $? -ne 0 ]]; then
+		exit 1;
+	fi
+	##截取bundle id,这种截取方法，有一点不太好的就是：当applicationIdentifier的值包含：*时候，会截取失败,如：applicationIdentifier=6789.*
+	local bundleId=${applicationIdentifier#*.}
+	echo $bundleId
+}
+
+##获取授权文件类型
+function getProfileType()
+{
+	local profile=$1
+	local profileType=''
+	if [[ ! -f "$profile" ]]; then
+		exit 1
+	fi
 	##判断是否存在key:ProvisionedDevices
-	haveKey=`$security cms -D -i "$profile" 2>/tmp/log.txt | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices`
-	if [[ $? -eq 0 ]]; then
-		getTaskAllow=`$plistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($security cms -D -i "$profile" 2>/tmp/log.txt) `
+	local haveKey=$($CMD_Security cms -D -i "$profile" 2>/dev/null | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//' | grep ProvisionedDevices)
+	if [[ "$haveKey" ]]; then
+		local getTaskAllow=$($CMD_PlistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< $($CMD_Security cms -D -i "$profile" 2>/dev/null ) )
 		if [[ $getTaskAllow == true ]]; then
 			profileType='development'
 		else
@@ -532,9 +653,9 @@ function getProfileType
 		fi
 	else
 
-		haveKeyProvisionsAllDevices=`$security cms -D -i "$profile" 2>/tmp/log.txt  | grep ProvisionsAllDevices`
+		local haveKeyProvisionsAllDevices=$($CMD_Security cms -D -i "$profile" 2>/dev/null | grep ProvisionsAllDevices)
 		if [[ "$haveKeyProvisionsAllDevices" != '' ]]; then
-			provisionsAllDevices=`$plistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< $($security cms -D -i "$profile" 2>/tmp/log.txt) `
+			provisionsAllDevices=$($CMD_PlistBuddy -c 'Print :ProvisionsAllDevices' /dev/stdin <<< "$($CMD_Security cms -D -i "$profile" 2>/dev/null)" )
 			if [[ $provisionsAllDevices == true ]]; then
 				profileType='enterprise'
 			else
@@ -544,320 +665,536 @@ function getProfileType
 			profileType='app-store'
 		fi
 	fi
+	echo $profileType
 }
 
-function setBundleId() {
-  if [[ "$newBundleId" != '' ]] ; then
-  	setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$newBundleId"
-  fi
-}
-
-##设置build version
-function setBuildVersion
+## 获取profile type的中文名字
+function getProfileTypeCNName()
 {
-
-	if [[ -d '.git' ]]; then
-	  ##获取configurationId 下的Build Version
-	  infoPlistFile=`$plistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$projectFile" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//'`
-	  ### 完整路径
-		infoPlistFilePath="$xcodeProject"/../$infoPlistFile
-		if [[ -f "$infoPlistFilePath" ]]; then
-			$plistBuddy -c "Set :CFBundleVersion $gitVersionCount" "$infoPlistFilePath"
-			logit "【Build Version】设置Buil Version:${gitVersionCount}"
-		else
-			errorExit "${infoPlistFilePath}文件不存在，无法修改"
-		fi
-	fi
-
-
+    local profileType=$1
+    local profileTypeName
+    if [[ "$profileType" == 'app-store' ]]; then
+        profileTypeName='商店分发'
+    elif [[ "$profileType" == 'enterprise' ]]; then
+        profileTypeName='企业分发'
+    else
+        profileTypeName='内部测试'
+    fi
+    echo $profileTypeName
 
 }
 
 
 
-##设置生产环境或者
-function setEnvironment
+### 开始构建归档，因为该函数里面逻辑较多，所以在里面添加了日志打印
+function archiveBuild()
 {
-	if [[ $haveConfigureEnvironment == true ]]; then
-		bakExtension=".bak"
-		bakFile=${environmentConfigureFile}${bakExtension}
-		if [[ $productionEnvironment == true ]]; then
-			if [[ "$currentEnvironmentValue" != "NO" ]]; then
-				sed -i "$bakExtension" "/kBMIsTestEnvironment/s/YES/NO/" "$environmentConfigureFile" && rm -rf $bakFile
-				logit "设置配置环境kBMIsTestEnvironment:NO"
-			fi
-		else
-			if [[ "$currentEnvironmentValue" != "YES" ]]; then
-				sed -i "$bakExtension" "/kBMIsTestEnvironment/s/NO/YES/" "$environmentConfigureFile" && rm -rf $bakFile
-				logit "设置配置环境kBMIsTestEnvironment:YES"
-			fi
-		fi
+	local targetName=$1
+	local xcconfigFile=$2
+	local xcworkspacePath=$(getXcworkspace)
+
+	## 暂时使用全局变量---
+	archivePath="${Package_Dir}"/$targetName.xcarchive
+
+
+
+	####################进行归档########################
+	local cmd="$CMD_Xcodebuild archive"
+	if [[ "$xcworkspacePath" ]]; then
+		cmd="$cmd"" -workspace \"$xcworkspacePath\""
 	fi
-}
+	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $CONFIGRATION_TYPE -xcconfig $xcconfigFile clean build"
 
-
-###开始构建
-function build
-{
-	logit "开始构建IPA..."
-	packageDir="$xcodeProject"/../build/package
-	rm -rf "$packageDir"/*
-	if [[ $debugConfiguration == true ]]; then
-		configuration="Debug"
-	else
-		configuration="Release"
-	fi
-
-	archivePath="${packageDir}"/$targetName.xcarchive
-	exprotPath="${packageDir}"/$targetName.ipa
-
-
-	if [[ -d "$archivePath" ]]; then
-		rm -rf "$archivePath"
-	fi
-
-	if [[ -f "$exprotPath" ]]; then
-		rm -rf "$exprotPath"
-	fi
-
-
-	##组装xcodebuild 构建需要的参数
-	cmd="$xcodebuild archive"
-	if [[ $isExistXcWorkspace == true ]]; then
-		cmd="$cmd"" -workspace \"$xcworkspace\""
-	fi
-	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $configuration -xcconfig $xcconfigFile clean build"
-
-	if [[ "$profileType" == "development" ]]; then
-		cmd="$cmd"" ARCHS=\"$arch\""
-	fi
-
-	##判断是否安装xcpretty
-	if which xcpretty  >/dev/null 2>&1 ;then
-		cmd="$cmd"" | xcpretty -c "
-	fi
-	##set -o pipefail 为了获取到管道前一个命令xcodebuild的执行结果，否则$?一直都会是0
-	eval "set -o pipefail && $cmd"
-
-	if [[ $? -ne 0 ]]; then
-		rm -rf "${packageDir}"/*
-		errorExit "命令：${cmd} 执行失败!"
-	fi
-
-
-
-	##获取当前xcodebuild版本
-
-
-
-	cmd="$xcodebuild -exportArchive"
-	## > 8.3
-	if versionCompareGE "$xcodeVersion" "8.3"; then
-		logit "当前版本:$xcodeVersion"" > 8.3， 生成 -exportOptionsPlist 参数所需的Plist文件:/tmp/optionsplist.plist"
-		generateOptionsPlist "$profileTeamId" "$profileType" "$appBundleId" "$profileName"
-		##发现在xcode8.3 之后-exportPath 参数需要指定一个目录，而8.3之前参数指定是一个带文件名的路径！坑！
-		 cmd="$cmd"" -archivePath \"$archivePath\" -exportPath \"$packageDir\" -exportOptionsPlist /tmp/optionsplist.plist"
-
-	# < 8.3
-	else
-		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exprotPath\""
-	fi
-	##判断是否安装xcpretty
-	if which xcpretty  >/dev/null 2>&1 ;then
+	local xcpretty=$(getXcprettyPath)
+	if [[ "$xcpretty" ]]; then
+		## 格式化日志输出
 		cmd="$cmd"" | xcpretty "
 	fi
-	eval "set -o pipefail && $cmd"
 
+	# 执行构建，set -o pipefail 为了获取到管道前一个命令xcodebuild的执行结果，否则$?一直都会是0
+	eval "set -o pipefail && $cmd " 
 	if [[ $? -ne 0 ]]; then
-		errorExit "$xcodebuild exportArchive  执行失败!"
+		errorExit "归档失败，请检查编译日志(编译错误、签名错误等)。"
 	fi
 
-	logit "IPA构建成功：\"$exprotPath\""
 
-
+	# echo "$archivePath"
 }
 
-##在打企业包的时候：会报 archived-expanded-entitlements.xcent  文件缺失!这是xcode的bug
-##链接：http://stackoverflow.com/questions/28589653/mac-os-x-build-server-missing-archived-expanded-entitlements-xcent-file-in-ipa
-function repairXcentFile
-{
-
-### xcode 9.0 已经修复该问题了，所以针对xcode 9.0 以下进行修复。
 
 
-if ! versionCompareGE "$xcodeVersion" "9.0"; then
+function exportIPA() {
 
-	appName=`basename "$exprotPath" .ipa`
-	xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
-	if [[ -f "$xcentFile" ]]; then
-		# logit  "修复xcent文件：\"$xcentFile\" "
-		logit  "archived-expanded-entitlements.xcent 文件：已修复"
-		unzip -o "$exprotPath" -d /"$packageDir" >/dev/null 2>&1
-		app="${packageDir}"/Payload/"${appName}".app
-		cp -af "$xcentFile" "$app" >/dev/null 2>&1
-		##压缩,并覆盖原有的ipa
-		cd "${packageDir}"  ##必须cd到此目录 ，否则zip会包含绝对路径
-		zip -qry  "$exprotPath" Payload >/dev/null 2>&1 && rm -rf Payload
-		cd - >/dev/null 2>&1
+	local archivePath=$1
+	local provisionFile=$2
+	local targetName=${archivePath%.*}
+	targetName=${targetName##*/}
+	local xcodeVersion=$(getXcodeVersion)
+	exportPath="${Package_Dir}"/${targetName}.ipa
+
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
+	fi
+
+	####################进行导出IPA########################
+	local cmd="$CMD_Xcodebuild -exportArchive"
+	## >= 8.3
+	if versionCompareGE "$xcodeVersion" "8.3"; then
+		local optionsPlistFile=$(generateOptionsPlist "$provisionFile")
+		 cmd="$cmd"" -archivePath \"$archivePath\" -exportPath \"$Package_Dir\" -exportOptionsPlist \"$optionsPlistFile\""
 	else
-		logit  "archived-expanded-entitlements.xcent 文件：跳过修复"
+		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exportPath\""
 	fi
-fi
-
+	##判断是否安装xcpretty
+	xcpretty=$(getXcprettyPath)
+	if [[ "$xcpretty" ]]; then
+		## 格式化日志输出
+		cmd="$cmd | xcpretty -c"
+	fi
+	# 这里需要添加>/dev/null 2>&1; ，否则echo exportPath 作为函数返回参数，会带有其他信息
+	eval "set -o pipefail && $cmd" ;
+	if [[ $? -ne 0 ]]; then
+		exit 1
+	fi
 }
 
-##构建完成，检查App
-function checkIPA
+
+
+##在包的时候：会报 archived-expanded-entitlements.xcent  文件缺失!这是xcode的bug
+##链接：http://stackoverflow.com/questions/28589653/mac-os-x-build-server-missing-archived-expanded-entitlements-xcent-file-in-ipa
+## 发现在 xcode >= 8.3.3 以上都不存在 ,在xcode8.2.1 存在
+function repairXcentFile()
 {
 
-	##解压强制覆盖，并不输出日志
+	local exportPath=$1
+	local archivePath=$2
+	local xcodeVersion=$(getXcodeVersion)
 
-	if [[ -d /tmp/Payload ]]; then
-		rm -rf /tmp/Payload
+	## 小于8.3(不包含8.3)
+	if ! versionCompareGE "$xcodeVersion" "8.3"; then
+		local appName=`basename "$exportPath" .ipa`
+		local xcentFile="${archivePath}"/Products/Applications/"${appName}".app/archived-expanded-entitlements.xcent
+		if [[ -f "$xcentFile" ]]; then
+			# baxcent文件从archive中拷贝到IPA中
+			unzip -o "$exportPath" -d /"$Package_Dir" >/dev/null 2>&1
+			local app="${Package_Dir}"/Payload/"${appName}".app
+			cp -af "$xcentFile" "$app" >/dev/null 2>&1
+			##压缩,并覆盖原有的ipa
+			cd "${Package_Dir}"  ##必须cd到此目录 ，否则zip会包含绝对路径
+			zip -qry  "$exportPath" Payload >/dev/null 2>&1 && rm -rf Payload
+			cd - >/dev/null 2>&1
+			## 因为重新加压，文件名和路径都没有变化
+			local ipa=$exportPath
+			echo  "$ipa"
+		fi
 	fi
-	unzip -o "$exprotPath" -d /tmp/ >/dev/null 2>&1
-	appName=`basename "$exprotPath" .ipa`
-	app=/tmp/Payload/"${appName}".app
+}
+
+
+#构建完成，检查App
+function checkIPA()
+{
+	local exportPath=$1
+	if [[ ! -f "$exportPath" ]]; then
+		exit 1
+	fi
+	local ipaName=`basename "$exportPath" .ipa`
+	##解压强制覆盖，并不输出日志
+	if [[ -d "${Package_Dir}/Payload" ]]; then
+		rm -rf "${Package_Dir}/Payload"
+	fi
+	unzip -o "$exportPath" -d ${Package_Dir} >/dev/null 2>&1
+	
+	local app=${Package_Dir}/Payload/"${ipaName}".app
 	codesign --no-strict -v "$app"
 	if [[ $? -ne 0 ]]; then
 		errorExit "签名检查：签名校验不通过！"
 	fi
-	logit "==============签名检查：签名校验通过！==============="
-	if [[ -d "$app" ]]; then
-		ipaInfoPlistFile=${app}/Info.plist
-		mobileProvisionFile=${app}/embedded.mobileprovision
-		appShowingName=`$plistBuddy -c "Print :CFBundleName" $ipaInfoPlistFile`
-		appBundleId=`$plistBuddy -c "print :CFBundleIdentifier" "$ipaInfoPlistFile"`
-		appVersion=`$plistBuddy -c "Print :CFBundleShortVersionString" $ipaInfoPlistFile`
-		appBuildVersion=`$plistBuddy -c "Print :CFBundleVersion" $ipaInfoPlistFile`
-		appMobileProvisionName=`$plistBuddy -c 'Print :Name' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-		appMobileProvisionCreationDate=`$plistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-        #授权文件有效时间
-		appMobileProvisionExpirationDate=`$plistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($security cms -D -i "$mobileProvisionFile" 2>/tmp/log.txt)`
-        getProvisionfileExpirationDays "$mobileProvisionFile"
-		appCodeSignIdenfifier=`codesign -dvvv "$app" 2>/tmp/log.txt &&  grep Authority /tmp/log.txt | head -n 1 | cut -d "=" -f2`
-		#支持最小的iOS版本
-		supportMinimumOSVersion=`$plistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile"`
-		#支持的arch
-		supportArchitectures=`$lipo -info "$app"/"$appName" | cut -d ":" -f 3`
-		logit "【IPA】名字:$appShowingName"
-		logit "【IPA】Xcode版本:$xcodeVersion"
-		# getEnvirionment
-		logit "【IPA】配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
-		logit "【IPA】bundle identify:$appBundleId"
-		logit "【IPA】版本:$appVersion"
-		logit "【IPA】build:$appBuildVersion"
-		logit "【IPA】支持最低iOS版本:$supportMinimumOSVersion"
-		logit "【IPA】支持的arch:$supportArchitectures"
-		logit "【IPA】签名:$appCodeSignIdenfifier"
-		logit "【IPA】授权文件:${appMobileProvisionName}.mobileprovision"
-		logit "【IPA】授权文件创建时间:$appMobileProvisionCreationDate"
-		logit "【IPA】授权文件过期时间:$appMobileProvisionExpirationDate"
-    logit "【IPA】授权文件有效天数：${expirationDays} 天"
-		getProfileType "$mobileProvisionFile"
-        profileTypeToName "$profileType"
-		logit "【IPA】分发渠道:$profileTypeName"
-
-	else
+	logit "【签名校验】签名校验通过"
+	if [[ ! -d "$app" ]]; then
 		errorExit "解压失败！无法找到$app"
 	fi
+
+	local ipaInfoPlistFile=${app}/Info.plist
+	local mobileProvisionFile=${app}/embedded.mobileprovision
+	local appShowingName=`$CMD_PlistBuddy -c "Print :CFBundleName" $ipaInfoPlistFile`
+	local appBundleId=`$CMD_PlistBuddy -c "print :CFBundleIdentifier" "$ipaInfoPlistFile"`
+	local appVersion=`$CMD_PlistBuddy -c "Print :CFBundleShortVersionString" $ipaInfoPlistFile`
+	local appBuildVersion=`$CMD_PlistBuddy -c "Print :CFBundleVersion" $ipaInfoPlistFile`
+	local appMobileProvisionName=`$CMD_PlistBuddy -c 'Print :Name' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
+	local appMobileProvisionCreationDate=`$CMD_PlistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
+    #授权文件有效时间
+	local appMobileProvisionExpirationDate=`$CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
+	local provisionFileExpirationDays=$(getProvisionfileExpirationDays "$mobileProvisionFile")
+	local provisionType=$(getProfileType "$mobileProvisionFile")
+	local channelName=$(getProfileTypeCNName $provisionType)
+	local appCodeSignIdenfifier=$($CMD_Codesign -dvvv "$app" 2>/tmp/log.txt &&  grep Authority /tmp/log.txt | head -n 1 | cut -d "=" -f2)
+	#支持最小的iOS版本
+	local supportMinimumOSVersion=$($CMD_PlistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile")
+	#支持的arch
+	local supportArchitectures=$($CMD_Lipo -info "$app"/"$ipaName" | cut -d ":" -f 3)
+
+	logit "【IPA 信息】名字:$appShowingName"
+	# getEnvirionment
+	# logit "配置环境kBMIsTestEnvironment:$currentEnvironmentValue"
+	logit "【IPA 信息】bundleID:$appBundleId"
+	logit "【IPA 信息】版本:$appVersion"
+	logit "【IPA 信息】build:$appBuildVersion"
+	logit "【IPA 信息】支持最低iOS版本:$supportMinimumOSVersion"
+	logit "【IPA 信息】支持的archs:$supportArchitectures"
+	logit "【IPA 信息】签名:$appCodeSignIdenfifier"
+	logit "【IPA 信息】授权文件:${appMobileProvisionName}.mobileprovision"
+	logit "【IPA 信息】授权文件创建时间:$appMobileProvisionCreationDate"
+	logit "【IPA 信息】授权文件过期时间:$appMobileProvisionExpirationDate"
+    logit "【IPA 信息】授权文件有效天数：${provisionFileExpirationDays} 天"
+    logit "【IPA 信息】授权文件分发渠道：${channelName}($provisionType)"
+
+    ## 清除解压出来的Playload
+    rm -rf ${Package_Dir}/Payload
 }
 
 
 
-##重命名和备份
-function renameAndBackup
-{
-
-	if [[ ! -d backupHistoryDir ]]; then
-		mkdir -p $backupHistoryDir
-	fi
-
-	if [[ $haveConfigureEnvironment == true ]]; then
-		if [[ "$currentEnvironmentValue" == 'YES' ]]; then
-			environmentName='开发环境'
-		else
-			environmentName='生产环境'
-		fi
-	else
-		environmentName='未知环境'
-	fi
-
-    profileTypeToName "$profileType"
-
-	date=`date +"%Y%m%d_%H%M%S"`
-	name=${appShowingName}_${date}_${environmentName}_${profileTypeName}_${appVersion}\($appBuildVersion\)
-	ipaName=${name}.ipa
-	textLogName=${name}.txt
-	logit "【IPA】ipa重命名并备份到：$backupDir/$ipaName"
-
-	mv "$exprotPath" "$packageDir"/$ipaName
-	cp -af "$packageDir"/$ipaName $backupDir/$ipaName
-	cp -af $tmpLogFile $backupDir/$textLogName
-
-}
+################################################################################################
 
 
-startDateSeconds=`date +%s`
+
+## 默认配置
+CONFIGRATION_TYPE='Release'
+ARCHS='arm64'
+CHANNEL='development'
+ENABLE_BITCODE='NO'
+DEBUG_INFORMATION_FORMAT='dwarf'
+AUTO_BUILD_VERSION='NO'
+UNLOCK_KEYCHAIN_PWD=''
+CODE_SIGN_STYLE='Manual'
+UNLOCK_KEYCHAIN_PWD=''
+PROVISION_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
+## 为了方便脚本配置接口环境（测试/正式）,需要3个参数分别是：接口环境配置文件名、接口环境变量名、接口环境变量值
+##是否是生产环境，默认为空不做任何修改
+API_ENV_PRODUCTION=''
+API_ENV_FILE_NAME=''
+API_ENV_VARNAME=''
 
 
-while getopts p:c:r:b:Bdxvhgtl  option; do
-  case "${option}" in
 
-    b) newBundleId=${OPTARG};;
-  	g) getGitVersionCount;exit;;
-    p) xcodeProject=${OPTARG};;
-	c) checkChannel ${OPTARG};;
-	t) productionEnvironment=false;;
-	l ) showUsableCodeSign;exit;;
-	r) arch=${OPTARG};;
-    x) set -x;;
-	d) debugConfiguration=true;;
-    v) verbose=true;;
-    h ) usage; exit;;
-	* ) usage;exit;;
-  esac
+###########################################核心逻辑#####################################################
+
+
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -b | --bundle-id )
+            shift
+            NEW_BUNDLE_IDENTIFIER=("$1")
+            ;;
+        -c | --channel )
+            shift
+            CHANNEL="$1"
+            ;;
+        -d | --provision-dir )
+            shift
+            PROVISION_DIR="$1"
+            ;;
+        -t | --configration-type )
+            shift
+            CONFIGRATION_TYPE="$1"
+            ;;
+        -a| --archs )
+            shift
+            ARCHS="$1"
+            ;;
+        -p| --keychain-password )
+            shift
+            UNLOCK_KEYCHAIN_PWD="$1"
+            ;;
+        -e| --api-environment )
+            shift
+            API_ENVIRONMENT="$1"
+            ;;
+            
+      	--enable-bitcode )
+            ENABLE_BITCODE='YES'
+            ;;
+      	--auto-buildversion )
+            AUTO_BUILD_VERSION='YES'
+            ;;
+
+      	--env-filename )
+			shift
+            API_ENV_FILE_NAME="$1"
+            ;;
+    	--env-varname)
+			shift
+	        API_ENV_VARNAME="$1"
+	        ;;
+    	--env-production)
+			shift
+	        API_ENV_PRODUCTION="$1"
+	        ;;
+        -h | --help )
+            usage
+            ;;
+        * )
+            usage
+            ;;
+    esac
+
+    shift
 done
 
 
 
-clean
-initConfiguration
-initXCconfig
-loginKeychainAccess
-checkForProjectFile
-checkIsExistWorkplace
-checkEnvironmentConfigureFile
 
-getXcodeVersion
-getEnvirionment
-getFirstTargets
 
-getConfigurationsIds
-getBuildConfigurationId
+##构建开始时间
+startTimeSeconds=`date +%s`
+historyBackup
+## 初始化用户配置
+initUserXcconfig
+if [[ $? -eq 0 ]]; then
+	logit "【数据备份】上一次打包文件已备份到：$Package_Dir/History"	
+fi
 
-setBundleId
+### Xcode版本
+xcVersion=$(getXcodeVersion)
+if [[ ! "$xcVersion" ]]; then
+	errorExit "获取当前XcodeVersion失败"
+fi
+logit "【构建信息】Xcode版本：$xcVersion"
 
-## 手动签名
-setXCconfigWithKeyValue "CODE_SIGN_STYLE" "Manual"
-## 关闭BitCode
-setXCconfigWithKeyValue "ENABLE_BITCODE" "NO"
-## 不生成调试文件
-setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "dwarf"
 
-getAPPBundleId
-autoMatchProvisionFile
-autoMatchCodeSignIdentity
-getGitVersionCount
+xcodeprojPath=$(checkXcodeprojExist)
+if [[ ! "$xcodeprojPath" ]]; then
+	errorExit "当前目录不存在Xcodeproj文件，请在工程目录下执行脚本$(basename $0)"
+fi
 
-setEnvironment
-setBuildVersion
 
-podInstall
-build
-repairXcentFile
-checkIPA
-renameAndBackup
-endDateSeconds=`date +%s`
+## 获取构建target Id
+targetId=$(getBuildTargetId "$xcodeprojPath")
+if [[ ! "$targetId" ]]; then
+	errorExit "获取构建Target Id失败"
+fi
+logit "【构建信息】Target Id：$targetId"
 
-logit "【构建时长】构建时长：$((${endDateSeconds}-${startDateSeconds})) 秒"
+## 获取target名称
+targetName=$(getTargetName "$xcodeprojPath" $targetId)
+if [[ ! "$targetName" ]]; then
+	errorExit "获取构建Target名字失败"
+fi
+logit "【构建信息】Target 名字：$targetName"
+
+
+##获取构配置类型的ID （Release和Debug分别对应不同的ID）
+configurationTypeIds=$(getConfigurationIds "$xcodeprojPath" "$targetId")
+if [[ ! "$configurationTypeIds" ]]; then
+	errorExit "获取配置模式(Release和Debug)Id列表失败"
+fi
+logit "【构建信息】配置模式(Release和Debug)Id列表：$configurationTypeIds"
+
+
+
+## 获取当前构建的配置模式ID
+configurationId=$(getConfigurationIdWithType "$xcodeprojPath" "$targetId" "$CONFIGRATION_TYPE")
+if [[ ! "$configurationId" ]]; then
+	errorExit "获取${CONFIGRATION_TYPE}配置模式Id失败"
+fi
+logit "【构建信息】配置模式：$CONFIGRATION_TYPE"
+logit "【构建信息】配置模式Id：$configurationId"
+
+
+## 获取Bundle Id
+if [[ $NEW_BUNDLE_IDENTIFIER ]]; then
+	## 重新指定Bundle Id
+	projectBundleId=$NEW_BUNDLE_IDENTIFIER
+else
+	## 获取工程中的Bundle Id
+	projectBundleId=$(getProjectBundleId "$xcodeprojPath" "$configurationId")
+	if [[ ! "$projectBundleId" ]] ; then
+		errorExit "获取项目的Bundle Id失败"
+	fi
+fi
+logit "【构建信息】Bundle Id：$projectBundleId"
+infoPlistFile=$(getInfoPlistFile "$xcodeprojPath" "$configurationId")
+if [[ ! "$infoPlistFile" ]]; then
+	errorExit "获取infoPlist文件失败"
+fi
+logit "【构建信息】InfoPlist 文件：$infoPlistFile"
+
+## 设置git仓库版本数量
+gitRepositoryVersionNumbers=$(getGitRepositoryVersionNumbers)
+if [[ "$AUTO_BUILD_VERSION" == "YES" ]] && [[ "$gitRepositoryVersionNumbers" ]]; then
+	setBuildVersion "$infoPlistFile" "$gitRepositoryVersionNumbers"
+	if [[ $? -ne 0 ]]; then
+		warning "设置构建版本号失败，跳过此设置"
+	else
+		logit "【构建信息】设置构建版本号：$gitRepositoryVersionNumbers"
+	fi
+fi
+
+## 设置环境变量
+apiEnvFile=$(findIPAEnvFile "$API_ENV_FILE_NAME")
+if [[ "$API_ENV_PRODUCTION" ]]; then
+	if [[ "$apiEnvFile" ]]; then
+		logit "【构建信息】API环境配置文件：$apiEnvFile"
+		if [[ "$API_ENV_VARNAME" ]] ; then
+			setIPAEnvFile "$apiEnvFile" "$API_ENV_VARNAME" "$API_ENV_PRODUCTION"
+
+			if [[ $? -ne 0 ]]; then
+				warning "设置API环境变量失败，跳过此设置"
+			else
+				logit "【构建信息】设置API环境变量：$API_ENV_VARNAME = $API_ENV_PRODUCTION"
+			fi
+		fi
+	fi
+
+fi
+
+## 设置手动签名
+codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
+if [[ ! "$codeSigningStyle" ]]; then
+	
+	## 添加手动签名配置
+	addManulCodeSigning "$xcodeprojPath" "$targetId"
+	if [[ $? -ne 0 ]]; then
+		errorExit "设置General手动签名失败"
+	else
+		logit "【签名信息】设置手动签名"
+	fi
+else
+	if [[ "$codeSigningStyle" != "Manual" ]]; then
+		setManulCodeSigning "$xcodeprojPath" "$targetId"
+		if [[ $? -eq 0 ]]; then
+			logit "【签名信息】设置手动签名"
+		fi
+	fi
+fi
+
+## 匹配授权文件
+provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISION_DIR")
+if [[ ! "$provisionFile" ]]; then
+	errorExit "不存在Bundle Id 为 ${projectBundleId} 且分发渠道为${CHANNEL}的授权文件，请检查${PROVISION_DIR}目录是否存在对应授权文件"
+fi
+## 授权文件type对应的名字
+channelName=$(getProfileTypeCNName $CHANNEL)
+## 获取授权文件的有效天数
+provisionFileExpirationDays=$(getProvisionfileExpirationDays "$provisionFile")
+provisionFileName=$(getProvisionfileName "$provisionFile")
+provisionFileTeamID=$(getProvisionfileTeamID "$provisionFile")
+provisionFileUUID=$(getProvisionfileUUID "$provisionFile")
+logit "【授权文件】匹配文件Bundle Id：${projectBundleId}"
+logit "【授权文件】匹配文件路径：${provisionFile}"
+logit "【授权文件】匹配文件名称：${provisionFileName}"
+logit "【授权文件】匹配文件TeamID：${provisionFileTeamID}"
+logit "【授权文件】匹配文件UUID：${provisionFileUUID}"
+logit "【授权文件】匹配文件分发渠道：${CHANNEL}(${channelName})"
+logit "【授权文件】匹配文件有效天数：${provisionFileExpirationDays}"
+
+
+
+
+## 匹配签名ID
+codeSignIdentity=$(matchCodeSignIdentity "$provisionFile" $CHANNEL)
+if [[ ! "$codeSignIdentity" ]]; then
+	errorExit "不存在授权文件${provisionFile} 且分发渠道为${CHANNEL}的签名"
+fi
+
+logit "【签名身份】匹配签名ID：$codeSignIdentity"
+
+
+
+
+### 进行构建配置信息覆盖，关闭BitCode、签名手动、配置签名等
+xcconfigFile=$(initBuildXcconfig)
+if [[ "$xcconfigFile" ]]; then
+	logit "【签名设置】初始化XCconfig配置文件：$xcconfigFile"
+fi
+
+
+setXCconfigWithKeyValue "ENABLE_BITCODE" "$ENABLE_BITCODE"
+setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "$DEBUG_INFORMATION_FORMAT"
+setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE"
+setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$provisionFileName" 
+setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$provisionFileUUID"
+setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$provisionFileTeamID"
+setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
+setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
+## 如果是进行商店分发或则企业分发，那么构建标准arch（即armv7和arm64）
+if [[ "$CHANNEL" == 'app-store' ]]|| [[ "$CHANNEL" == 'enterprise' ]] ; then
+	setXCconfigWithKeyValue "ARCHS" "armv7 arm64"
+else
+	## 构建默认arch或者用户指定archs
+	setXCconfigWithKeyValue "ARCHS" "$ARCHS"
+fi
+
+
+
+unlockKeychain
+if [[ $? -eq 0 ]]; then
+	logit "【钥匙串 】unlock-keychain";
+else
+	logit "【钥匙串 】unlock-keychain 失败";
+fi
+
+
+## podfile 检查
+podfile=$(checkPodfileExist)
+if [[ "$podfile" ]]; then
+	pod install
+fi
+
+## 开始归档。
+## 这里使用a=$(...)这种形式会导致xocdebuild日志只能在函数archiveBuild执行完毕的时候输出；
+## archivePath 在函数archiveBuild 是全局变量
+archivePath=''
+archiveBuild "$targetName" "$Tmp_Build_Xcconfig_File" 
+logit "【归档信息】项目构建成功，文件路径：$archivePath"
+
+
+
+# 开始导出IPA
+exportPath=''
+exportIPA  "$archivePath" "$provisionFile"
+if [[ ! "$exportPath" ]]; then
+	errorExit "IPA导出失败，请检查日志。"
+fi
+logit "【IPA 导出】IPA导出成功，文件路径：$exportPath"
+if [[ ! "$ipaName" ]]; then
+	ipaName=$targetName
+fi
+
+
+## 修复8.3 以下版本的xcent文件
+xcentFile=$(repairXcentFile "$exportPath" "$archivePath")
+if [[ "$xcentFile" ]]; then
+	logit "【xcent 文件修复】拷贝archived-expanded-entitlements.xcent 到${xcentFile}"
+fi
+
+## 检查IPA
+checkIPA "$exportPath"
+
+##清理临时文件
+rm -rf "$Tmp_Options_Plist_File"
+rm -rf "$Tmp_Build_Xcconfig_File"
+rm -rf "$archivePath"
+rm -rf "$Package_Dir/Packaging.log"
+rm -rf "$Package_Dir/ExportOptions.plist"
+rm -rf "$Package_Dir/DistributionSummary.plist"
+
+
+
+
+## IPA和日志重命名
+logit "【IPA 信息】IPA和日志名字格式化..."
+exportDir=${exportPath%/*} 
+ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$apiEnvVarName" "$infoPlistFile" "$channelName")
+mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
+mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
+logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
+logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
+
+##结束时间
+endTimeSeconds=`date +%s`
+logit "【构建时长】构建时长：$((${endTimeSeconds}-${startTimeSeconds})) 秒"
+
+
