@@ -12,18 +12,21 @@ IPABuildShell
 
 fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
-Usage:autoMathSign.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ...
+Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ...
 可选项：
-  -a | --archs 	<armv7|arm64|armv7 arm64> 指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
-  -b | --bundle-id bundleId 设置Bundle Id
-  -c | --channel <development|app-store|enterprise> 指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发
-  -d | --provision-dir dir 指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
-  -p | --keychain-password passoword 指定访问证书时解锁钥匙串的密码，即开机密码
-  -t | --configration-type  <Debug|Release> Debug 调试模式, Release 发布模式
-  -h | --help 帮助.
-  -x 脚本执行调试模式.
-  --enable-bitcode <YES/NO> 是否开启BitCode.
-  --auto-buildversion <YES/NO> 是否自动修改构建版本号（设置为当前项目的git版本数量）
+  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
+  -b | --bundle-id bundleId 			设置Bundle Id
+  -c | --channel <development|app-store|enterprise> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发
+  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
+  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码
+  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式
+  -h | --help					帮助.
+  -x 						脚本执行调试模式.
+  --enable-bitcode <YES/NO> 			是否开启BitCode.
+  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）
+  --env-filename filename 			指定开发和生产环境的配置文件
+  --env-varname varname				指定开发和生产环境的配置变量
+  --env-production <YES/NO>			YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）
 ```
 
 功能

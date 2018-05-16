@@ -54,6 +54,11 @@ function usage
 
 	echo "  --enable-bitcode <YES/NO> 			是否开启BitCode."
 	echo "  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）"
+	echo "  --env-filename filename 			指定开发和生产环境的配置文件"
+	echo "  --env-varname varname				指定开发和生产环境的配置变量"
+	echo "  --env-production <YES/NO>			YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）"
+
+
 
 	exit 0
 }
