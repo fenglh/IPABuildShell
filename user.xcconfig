@@ -1,0 +1,28 @@
+
+//脚本全局参数配置文件(脚本参数优先于全局配置参数)
+
+
+
+
+//keychain解锁密码，即PC开机密码。通常只有在第一次执行脚本时候需要。
+UNLOCK_KEYCHAIN_PWD =
+
+//构建模式：Debug/Release ；默认 Release
+CONFIGRATION_TYPE=
+
+//架构集 ：arm64/armv7/armv7 arm64 ；默认 arm64
+ARCHS =
+
+//是否启动bitcode ：YES/NO 关闭； 默认 NO
+ENABLE_BITCODE =
+
+//是否自动修改build version：YES/NO ；默认 NO （取当前项目git的版本数量作为build version ）
+AUTO_BUILD_VERSION =
+
+//授权文件目录，默认在~/Library/MobileDevice/Provisioning Profiles 
+PROVISION_DIR= 
+
+
+
+
+
