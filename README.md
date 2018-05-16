@@ -63,10 +63,10 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 ==
 
 1. #### IPABuildShell.sh 下载到本地,并赋予可执行权限
-  `chmod +x /路径/IPABuildShell.sh `
+    `chmod +x /路径/IPABuildShell.sh `
   
 2. #### 安装xcpretty（可选）
-  `sudo gem install xcpretty`
+    `sudo gem install xcpretty`
 
   用来格式化xcodebuild输出日志，建议安装
 
