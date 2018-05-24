@@ -442,6 +442,34 @@ function getProvisionfileExpirationDays()
     echo $expirationDays
 }
 
+## 获取授权文件中的签名id
+function getProvisionCodeSignIdentity
+{
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
+	fi
+	## 获取DeveloperCertificates 字段
+	local data=$($CMD_Security cms -D -i "$provisionFile" | grep data | sed 's/.*<data>//g' | sed 's/<\/data>.*//g' ) 
+
+
+	if [[ $? -ne 0 ]]; then
+		exit 1
+	fi
+	## 使用openssl进行解码 1. 构建cer证书 2. 解码证书
+	## 1.
+	local tmpCerFile='/tmp/tmp.cer'
+	echo "-----BEGIN CERTIFICATE-----" 	> "$tmpCerFile"
+	echo "${data}"						>> "$tmpCerFile"
+	echo "-----END CERTIFICATE-----"	>> "$tmpCerFile"
+
+
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$tmpCerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
+
+
+	echo $codeSignIdentity
+}
+
 ## 获取授权文件UUID
 function getProvisionfileUUID()
 {
@@ -566,32 +594,39 @@ function getProjectBundleId()
 	echo $bundleId
 }
 
-
-##匹配签名身份
-function matchCodeSignIdentity()
+function checkCodeSignIdentityValid()
 {
-	local provisionFile=$1
-	local channel=$2
-	local channelFilterString=''
-	local startSearchString=''
-	local endSearchString='1\\0230\\021\\006\\003U\\004'
-
-
-	if [[ ! -f "$provisionFile" ]]; then
-		exit 1;
-	fi
-
-	if [[ "$channel" == 'enterprise' ]] || [[ "$channel" == 'app-store' ]]; then
-		channelFilterString='iPhone Distribution: '
-		startSearchString='003U\\004\\003\\0142'
-	else
-		channelFilterString='iPhone Developer: '
-		startSearchString='003U\\004\\003\\014&'
-	fi
-	profileTeamId=$($CMD_PlistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
-	codeSignIdentity=$($CMD_Security dump-keychain 2>/dev/null | grep "\"subj\"<blob>=" | cut -d '=' -f 2 | grep "$profileTeamId" | awk -F "[\"\"]" '{print $2}' | grep "$channelFilterString" | sed "s/\(.*\)$startSearchString\(.*\)$endSearchString\(.*\)/\2/g" | head -n 1)
-	echo "$codeSignIdentity"
+	local codeSignIdentity=$1
+	local content=$($CMD_Security find-identity -v -p codesigning | grep "$codeSignIdentity")
+	echo "$content"
 }
+
+
+##匹配签名身份--方法已被替换
+# function matchCodeSignIdentity()
+# {
+# 	local provisionFile=$1
+# 	local channel=$2
+# 	local channelFilterString=''
+# 	local startSearchString=''
+# 	local endSearchString='1\\0230\\021\\006\\003U\\004'
+
+
+# 	if [[ ! -f "$provisionFile" ]]; then
+# 		exit 1;
+# 	fi
+
+# 	if [[ "$channel" == 'enterprise' ]] || [[ "$channel" == 'app-store' ]]; then
+# 		channelFilterString='iPhone Distribution: '
+# 		startSearchString='003U\\004\\003\\0142'
+# 	else
+# 		channelFilterString='iPhone Developer: '
+# 		startSearchString='003U\\004\\003\\014&'
+# 	fi
+# 	profileTeamId=$($CMD_PlistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+# 	codeSignIdentity=$($CMD_Security dump-keychain 2>/dev/null | grep "\"subj\"<blob>=" | cut -d '=' -f 2 | grep "$profileTeamId" | awk -F "[\"\"]" '{print $2}' | grep "$channelFilterString" | sed "s/\(.*\)$startSearchString\(.*\)$endSearchString\(.*\)/\2/g" | head -n 1)
+# 	echo "$codeSignIdentity"
+# }
 
 ##匹配授权文件
 function matchMobileProvisionFile()
@@ -1096,14 +1131,20 @@ logit "【授权文件】匹配文件有效天数：${provisionFileExpirationDay
 
 
 
+codeSignIdentity=$(getProvisionCodeSignIdentity "$provisionFile")
 
-## 匹配签名ID
-codeSignIdentity=$(matchCodeSignIdentity "$provisionFile" $CHANNEL)
 if [[ ! "$codeSignIdentity" ]]; then
-	errorExit "不存在授权文件${provisionFile} 且分发渠道为${CHANNEL}的签名"
+	errorExit "获取授权文件签名失败! 授权文件:${provisionFile}"
+fi
+logit "【授权文件】匹配签名ID：$codeSignIdentity"
+
+
+result=$(checkCodeSignIdentityValid "$codeSignIdentity")
+if [[ ! "$result" ]]; then
+	errorExit "签名ID:${codeSignIdentity}无效，请检查钥匙串是否导入对应的证书或脚本访问keychain权限不足，请使用-p参数指定密码 "
 fi
 
-logit "【签名身份】匹配签名ID：$codeSignIdentity"
+
 
 
 
@@ -1189,7 +1230,7 @@ rm -rf "$Package_Dir/DistributionSummary.plist"
 
 
 ## IPA和日志重命名
-logit "【IPA 信息】IPA和日志名字格式化..."
+logit "【IPA 信息】IPA和日志重命名"
 exportDir=${exportPath%/*} 
 
 
