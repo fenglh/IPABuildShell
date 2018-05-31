@@ -131,7 +131,7 @@ API_ENV_PRODUCTION =
 
 openssl
 ==
-如果你的openssl是 LibreSSL ，那么先安装回旧版本的openssl
+如果你的openssl是 LibreSSL ，那么请安装新版本的openssl
 
 [Mac OSX 安装新版OpenSSL问题](https://www.jianshu.com/p/32f068922baf)
 ```
