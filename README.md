@@ -71,6 +71,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
   用来格式化xcodebuild输出日志，建议安装
 
 
+
 使用
 ==
 
@@ -125,6 +126,17 @@ API_ENV_PRODUCTION =
 
 
 
+```
+
+
+openssl
+==
+如果你的openssl是 LibreSSL ，那么先安装回旧版本的openssl
+
+[Mac OSX 安装新版OpenSSL问题](https://www.jianshu.com/p/32f068922baf)
+```
+bluemoon007deiMac:SVGManager itx$ openssl version
+OpenSSL 1.0.2o  27 Mar 2018
 ```
 
 最后
