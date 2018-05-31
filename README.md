@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-05-16 16:05"
+date: "2018-05-24 16:38"
 ---
 IPABuildShell
 ==
@@ -64,7 +64,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 
 1. #### IPABuildShell.sh 下载到本地,并赋予可执行权限
     `chmod +x /路径/IPABuildShell.sh `
-  
+
 2. #### 安装xcpretty（可选）
     `sudo gem install xcpretty`
 
@@ -144,6 +144,14 @@ API_ENV_PRODUCTION =
 ### 版本更新日志
 
 ```
+# 2018/05/24
+# 版本：3.0.0
+# 1. 自动匹配授权文件和签名（移除config.plist配置）
+# 2. 优化授权文件匹配算法，取有效期最长授权文件
+# 3. 调整脚本参数,详见-h
+# 4. 优化代码
+# 5. 兼容长参数
+# 6. 增加全局配置文件user.xcconfig
 #--------------------------------------------
 # 2018/05/16
 # 版本：3.0.0

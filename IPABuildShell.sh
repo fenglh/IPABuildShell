@@ -949,6 +949,8 @@ while [ "$1" != "" ]; do
             shift
             UNLOCK_KEYCHAIN_PWD="$1"
             ;;
+         -x )
+			set -x;;
             
       	--enable-bitcode )
             ENABLE_BITCODE='YES'
