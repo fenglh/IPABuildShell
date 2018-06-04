@@ -219,6 +219,8 @@ function generateOptionsPlist(){
 	<string>$provisionFileTeamID</string>\n
 	<key>method</key>\n
 	<string>$provisionFileType</string>\n
+	<key>stripSwiftSymbols</key>\n
+    <true/>\n
 	<key>provisioningProfiles</key>\n
     <dict>\n
         <key>$provisionFileBundleID</key>\n
