@@ -139,8 +139,7 @@ openssl
 bluemoon007deiMac:SVGManager itx$ openssl version
 LibreSSL 2.2.7
 ```
-
-更新之后
+更新之后
 
 ```
 bluemoon007deiMac:~ itx$ openssl version
