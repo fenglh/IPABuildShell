@@ -134,7 +134,6 @@ openssl
 如果你的openssl是 LibreSSL ，那么请安装新版本的openssl
 
 [Mac OSX 安装新版OpenSSL问题](https://www.jianshu.com/p/32f068922baf)
-[两个openssl 共存设置问题](https://segmentfault.com/a/1190000004395173)
 
 ```
 bluemoon007deiMac:SVGManager itx$ openssl version
@@ -147,6 +146,14 @@ bluemoon007deiMac:~ itx$ openssl version
 OpenSSL 1.0.2o  27 Mar 2018
 ```
 
+如果更新之后还是没有显示正确的openssl，是因为系统存在两个openssl。可通过设置系统环境变量`PATH`来优先执行执行哪个`openssl`
+
+```
+echo 'export PATH="/usr/local/Cellar/openssl/1.0.2o_1/bin/:$PATH"' >> ~/.bash_profile
+source ~/.bash_profile
+```
+
+注意：`/usr/local/Cellar/openssl/1.0.2o_1/bin/` 该路径请按照你实际情况来更改,通常是`1.0.2o_1`这个文件夹不同！
 最后
 ==
 如果本工具对你有帮助，麻烦Star一个！谢谢！
