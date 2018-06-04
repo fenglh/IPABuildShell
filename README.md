@@ -146,7 +146,7 @@ bluemoon007deiMac:~ itx$ openssl version
 OpenSSL 1.0.2o  27 Mar 2018
 ```
 
-如果更新之后还是没有显示正确的openssl，是因为系统存在两个openssl。可通过设置系统环境变量`PATH`来优先执行执行哪个`openssl`
+如果更新之后还是没有显示正确的openssl，是因为系统存在两个openssl，通过`which openssl`命令可以查看，当前终端执行的`openssl`是哪个路径下的。可通过设置系统环境变量`PATH`来优先执行执行哪个路径下的`openssl`。
 
 ```
 echo 'export PATH="/usr/local/Cellar/openssl/1.0.2o_1/bin/:$PATH"' >> ~/.bash_profile
