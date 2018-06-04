@@ -134,6 +134,7 @@ openssl
 如果你的openssl是 LibreSSL ，那么请安装新版本的openssl
 
 [Mac OSX 安装新版OpenSSL问题](https://www.jianshu.com/p/32f068922baf)
+[两个openssl 共存设置问题](https://segmentfault.com/a/1190000004395173)
 
 ```
 bluemoon007deiMac:SVGManager itx$ openssl version
