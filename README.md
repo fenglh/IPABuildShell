@@ -134,8 +134,16 @@ openssl
 如果你的openssl是 LibreSSL ，那么请安装新版本的openssl
 
 [Mac OSX 安装新版OpenSSL问题](https://www.jianshu.com/p/32f068922baf)
+
 ```
 bluemoon007deiMac:SVGManager itx$ openssl version
+LibreSSL 2.2.7
+```
+
+更新之后
+
+```
+bluemoon007deiMac:~ itx$ openssl version
 OpenSSL 1.0.2o  27 Mar 2018
 ```
 
