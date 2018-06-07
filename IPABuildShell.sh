@@ -91,7 +91,7 @@ function historyBackup() {
 
 		## 备份上一次的打包数据
 	if [[ -d "$Package_Dir" ]]; then
-		for name in `ls $Package_Dir` ; do
+		for name in "${Package_Dir}/*" ; do
 			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir"/"$name" ]]; then
 				continue;
 			fi
