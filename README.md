@@ -154,6 +154,7 @@ source ~/.bash_profile
 ```
 
 注意：`/usr/local/Cellar/openssl/1.0.2o_1/bin/` 该路径请按照你实际情况来更改,通常是`1.0.2o_1`这个文件夹不同！
+
 最后
 ==
 如果本工具对你有帮助，麻烦Star一个！谢谢！
