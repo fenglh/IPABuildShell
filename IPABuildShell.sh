@@ -92,15 +92,15 @@ function historyBackup() {
 		## 备份上一次的打包数据
 	if [[ -d "$Package_Dir" ]]; then
 		for name in `ls $Package_Dir` ; do
-			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir/$name" ]]; then
+			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir"/"$name" ]]; then
 				continue;
 			fi
 
-			cp -rf "$Package_Dir/$name" "$Package_Dir/History"
-			rm -rf "$Package_Dir/$name"
+			cp -rf "$Package_Dir"/"$name" "$Package_Dir"/"History"
+			rm -rf "$Package_Dir"/"$name"
 		done
 	else
-		mkdir -p "$Package_Dir/History"
+		mkdir -p "$Package_Dir"/"History"
 	fi
 }
 
@@ -1133,27 +1133,6 @@ fi
 
 ## 设置手动签名
 setManulCodeSigningRuby "$xcodeprojPath" "$targetId"
-
-
-####下面这段逻辑是用PlistBuddy工具进行配置，但是PlistBuddy工具会导致工程文建格式发生变化，导致中文乱码。所以改成用xcodeproj来修改
-# codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
-# if [[ ! "$codeSigningStyle" ]]; then
-	
-# 	## 添加手动签名配置
-# 	addManulCodeSigning "$xcodeprojPath" "$targetId"
-# 	if [[ $? -ne 0 ]]; then
-# 		errorExit "设置General手动签名失败"
-# 	else
-# 		logit "【签名信息】设置手动签名"
-# 	fi
-# else
-# 	if [[ "$codeSigningStyle" != "Manual" ]]; then
-# 		setManulCodeSigning "$xcodeprojPath" "$targetId"
-# 		if [[ $? -eq 0 ]]; then
-# 			logit "【签名信息】设置手动签名"
-# 		fi
-# 	fi
-# fi
 
 
 ##检查openssl
