@@ -365,14 +365,43 @@ function getCodeSigningStyle ()
 
 }
 
-##设置签名方式（手动/自动）
+##设置签名方式（手动/自动）,注意：如果项目存在中文文件名，使用PlistBuddy 命令对pbxproj文件进行修改导致乱码！该方法已被抛弃!
 function setManulCodeSigning ()
 {
+
 	local pbxproj=$1/project.pbxproj
 	local targetId=$2
 	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
 	##如果需要设置成自动签名,将Manual改成Automatic
 	$CMD_PlistBuddy -c "Set :objects:$rootObject:attributes:TargetAttributes:$targetId:ProvisioningStyle Manual" "$pbxproj"
+
+
+}
+
+function setManulCodeSigningRuby()
+{
+	local project=$1
+	local targetId=$2
+	local pbxproj=$1/project.pbxproj
+
+
+	local codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
+	if [[ ! "$codeSigningStyle" ]] || [[ "$codeSigningStyle" != "Manual" ]]; then
+
+		ruby "$Shell_File_Path/set_codesign_style.rb" "$project" "$targetId" 2>/dev/null
+		## 这里会报错 :如果c [Xcodeproj] Unknown object version. (RuntimeError),但是实际可以修改成功，暂时不做下面的逻辑处理
+		# if [[ $? -ne 0 ]]; then
+		# 	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
+		# 	local compatibilityVersion=$($CMD_PlistBuddy -c "Print :objects:$rootObject:compatibilityVersion" "$pbxproj")
+		# 	if [[ "$compatibilityVersion"=="Xcode 9.3" ]]; then
+		# 		errorExit "设置手动签名失败,cocoapod 不兼容Xcode 9.3。版本请在【项目】- xxxTarget】- Show the File inspector】- Project Document】-【Project Format】 中选中小于Xcode 9.3-compatible的一项"
+		# 	else
+		# 		errorExit "设置手动签名失败，请在【项目】-【General】-【Signing】中去掉勾选Automatically manage signning"
+		# 	fi
+
+		# fi
+	fi
+
 }
 
 function addManulCodeSigning ()
@@ -452,7 +481,7 @@ function getProvisionCodeSignIdentity
 		exit 1
 	fi
 	## 获取DeveloperCertificates 字段
-	local data=$($CMD_Security cms -D -i "$provisionFile" | grep data | sed 's/.*<data>//g' | sed 's/<\/data>.*//g' ) 
+	local data=$($CMD_Security cms -D -i "$provisionFile" | grep data | head -n 1 | sed 's/.*<data>//g' | sed 's/<\/data>.*//g' ) 
 
 
 	if [[ $? -ne 0 ]]; then
@@ -1092,24 +1121,28 @@ if [[ "$API_ENV_PRODUCTION" ]]; then
 fi
 
 ## 设置手动签名
-codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
-if [[ ! "$codeSigningStyle" ]]; then
+setManulCodeSigningRuby "$xcodeprojPath" "$targetId"
+
+
+####下面这段逻辑是用PlistBuddy工具进行配置，但是PlistBuddy工具会导致工程文建格式发生变化，导致中文乱码。所以改成用xcodeproj来修改
+# codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
+# if [[ ! "$codeSigningStyle" ]]; then
 	
-	## 添加手动签名配置
-	addManulCodeSigning "$xcodeprojPath" "$targetId"
-	if [[ $? -ne 0 ]]; then
-		errorExit "设置General手动签名失败"
-	else
-		logit "【签名信息】设置手动签名"
-	fi
-else
-	if [[ "$codeSigningStyle" != "Manual" ]]; then
-		setManulCodeSigning "$xcodeprojPath" "$targetId"
-		if [[ $? -eq 0 ]]; then
-			logit "【签名信息】设置手动签名"
-		fi
-	fi
-fi
+# 	## 添加手动签名配置
+# 	addManulCodeSigning "$xcodeprojPath" "$targetId"
+# 	if [[ $? -ne 0 ]]; then
+# 		errorExit "设置General手动签名失败"
+# 	else
+# 		logit "【签名信息】设置手动签名"
+# 	fi
+# else
+# 	if [[ "$codeSigningStyle" != "Manual" ]]; then
+# 		setManulCodeSigning "$xcodeprojPath" "$targetId"
+# 		if [[ $? -eq 0 ]]; then
+# 			logit "【签名信息】设置手动签名"
+# 		fi
+# 	fi
+# fi
 
 ## 匹配授权文件
 provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISION_DIR")
