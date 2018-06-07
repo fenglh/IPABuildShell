@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-05-24 16:38"
+date: "2018-06-7 18:39"
 ---
 IPABuildShell
 ==
@@ -172,6 +172,13 @@ source ~/.bash_profile
 ### 版本更新日志
 
 ```
+# 2018/06/07
+# 版本：3.0.1
+# 1. 修复备份PackageLog文件夹的一些bug
+# 2. 使用xcodeproj工具代替PlistBuddy来修改project.pbxproj文件，防止项目中文乱码和project.pbxproj文件格式发生变化
+# 3. 增加岁OpenSSL的检查校验
+#--------------------------------------------
+
 # 2018/05/24
 # 版本：3.0.0
 # 1. 自动匹配授权文件和签名（移除config.plist配置）
