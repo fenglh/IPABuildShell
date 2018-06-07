@@ -387,7 +387,7 @@ function setManulCodeSigningRuby()
 
 	local codeSigningStyle=$(getCodeSigningStyle "$xcodeprojPath" "$targetId")
 	if [[ ! "$codeSigningStyle" ]] || [[ "$codeSigningStyle" != "Manual" ]]; then
-
+		logit "【签名信息】设置签名方式:Manual"
 		ruby "$Shell_File_Path/set_codesign_style.rb" "$project" "$targetId" 2>/dev/null
 		## 这里会报错 :如果c [Xcodeproj] Unknown object version. (RuntimeError),但是实际可以修改成功，暂时不做下面的逻辑处理
 		# if [[ $? -ne 0 ]]; then
