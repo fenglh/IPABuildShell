@@ -92,12 +92,12 @@ function historyBackup() {
 		## 备份上一次的打包数据
 	if [[ -d "$Package_Dir" ]]; then
 		for name in "${Package_Dir}/*" ; do
-			if [[ "$name" == "History" ]] && [[ -d "$Package_Dir"/"$name" ]]; then
+			if [[ "$name" == "History" ]] && [[ -d "$name" ]]; then
 				continue;
 			fi
 
-			cp -rf "$Package_Dir"/"$name" "$Package_Dir"/"History"
-			rm -rf "$Package_Dir"/"$name"
+			cp -rf "$name" "$Package_Dir"/"History"
+			rm -rf "$name"
 		done
 	else
 		mkdir -p "$Package_Dir"/"History"
