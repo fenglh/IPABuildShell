@@ -147,7 +147,7 @@ function checkOpenssl() {
 	local opensslName=$(echo $opensslInfo | cut -d " " -f1)
 	local opensslVersion=$(echo $opensslInfo | cut -d " " -f2)
 	if [[ "$opensslName" == "LibreSSL" ]] || ! versionCompareGE "${opensslVersion%\.*}" "1.0"; then
-		errorExit "openssl 版本过旧，请更新openssl版本"
+		errorExit "${opensslInfo} 版本过旧，请更新openssl版本"
 	fi
 	logit "【构建信息】openssl版本:$opensslInfo"
 }
