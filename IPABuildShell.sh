@@ -142,6 +142,16 @@ function initUserXcconfig() {
 
 }
 
+function checkOpenssl() {
+	local opensslInfo=$(openssl version)
+	local opensslName=$(echo $opensslInfo | cut -d " " -f1)
+	local opensslVersion=$(echo $opensslInfo | cut -d " " -f2)
+	if [[ "$opensslName" == "LibreSSL" ]] || ! versionCompareGE "$opensslVersion" "1.0"; then
+		errorExit "openssl 版本过旧，请更新openssl版本"
+	fi
+	logit "【构建信息】openssl版本:$opensslInfo"
+}
+
 function getXcconfigValue() {
 	local xcconfigFile=$1
 	local key=$2
@@ -1025,6 +1035,10 @@ initUserXcconfig
 if [[ $? -eq 0 ]]; then
 	logit "【数据备份】上一次打包文件已备份到：$Package_Dir/History"	
 fi
+
+### 检查openssl
+checkOpenssl
+
 
 ### Xcode版本
 xcVersion=$(getXcodeVersion)
