@@ -1036,9 +1036,6 @@ if [[ $? -eq 0 ]]; then
 	logit "【数据备份】上一次打包文件已备份到：$Package_Dir/History"	
 fi
 
-### 检查openssl
-checkOpenssl
-
 
 ### Xcode版本
 xcVersion=$(getXcodeVersion)
@@ -1158,6 +1155,10 @@ setManulCodeSigningRuby "$xcodeprojPath" "$targetId"
 # 	fi
 # fi
 
+
+##检查openssl
+checkOpenssl
+
 ## 匹配授权文件
 provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISION_DIR")
 if [[ ! "$provisionFile" ]]; then
@@ -1179,6 +1180,7 @@ logit "【授权文件】匹配文件TeamID：${provisionFileTeamID}"
 logit "【授权文件】匹配文件UUID：${provisionFileUUID}"
 logit "【授权文件】匹配文件分发渠道：${CHANNEL}(${channelName})"
 logit "【授权文件】匹配文件有效天数：${provisionFileExpirationDays}"
+
 
 
 
