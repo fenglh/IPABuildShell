@@ -66,8 +66,9 @@ function usage
 
 ## 日志格式化输出
 function logit() {
-    echo -e "\033[32m [IPABuildShell] \033[0m $@"
+    echo -e "\033[32m [IPABuildShell] \033[0m $@" 
     echo "$@" >> "$Tmp_Log_File"
+
 }
 
 ## 日志格式化输出
@@ -249,7 +250,7 @@ function generateOptionsPlist(){
 ##检查xcodeproj 是否存在
 function checkXcodeprojExist() {
 
-	local xcodeprojPath=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name "*.xcodeproj")
+	local xcodeprojPath=$(find "$Shell_Work_Path" -maxdepth 1  -type d -iname "*.xcodeproj")
 	if [[ ! -d "$xcodeprojPath" ]]; then
 		exit 1
 	fi
@@ -259,7 +260,7 @@ function checkXcodeprojExist() {
 ##检查xcworkspace 是否存在
 function getXcworkspace() {
 
-	local xcworkspace=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name "*.xcworkspace")
+	local xcworkspace=$(find "$Shell_Work_Path" -maxdepth 1  -type d -iname "*.xcworkspace")
 	if [[ -d "$xcworkspace" ]]; then
 		echo $xcworkspace
 	fi
@@ -268,7 +269,7 @@ function getXcworkspace() {
 ##检查podfile是否存在
 function  checkPodfileExist() {
 
-	local podfile=$(find "$Shell_Work_Path" -maxdepth 1  -type f -name "Podfile")
+	local podfile=$(find "$Shell_Work_Path" -maxdepth 1  -type f -iname "Podfile")
 	if [[ ! -f "$podfile" ]]; then
 		exit 1
 	fi
@@ -298,7 +299,7 @@ function getBuildVersion() {
 ## 获取git仓库版本数量
 function getGitRepositoryVersionNumbers (){
 		## 是否存在.git目录
-	local gitRepository=$(find "$Shell_Work_Path" -maxdepth 1  -type d -name ".git")
+	local gitRepository=$(find "$Shell_Work_Path" -maxdepth 1  -type d -iname ".git")
 	if [[ ! -d "$gitRepository" ]]; then
 		exit 1
 	fi
@@ -1217,6 +1218,7 @@ fi
 ## podfile 检查
 podfile=$(checkPodfileExist)
 if [[ "$podfile" ]]; then
+	logit "【cocoapods】pod install";
 	pod install
 fi
 
@@ -1266,15 +1268,15 @@ logit "【IPA 信息】IPA和日志重命名"
 exportDir=${exportPath%/*} 
 
 
-
 ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$channelName")
-mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
-mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
 logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
 
 ##结束时间
 endTimeSeconds=`date +%s`
 logit "【构建时长】构建时长：$((${endTimeSeconds}-${startTimeSeconds})) 秒"
+
+mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
+mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
 
 
