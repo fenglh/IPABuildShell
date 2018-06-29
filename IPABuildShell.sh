@@ -159,8 +159,9 @@ function getXcconfigValue() {
 	if [[ ! -f "$xcconfigFile" ]]; then
 		exit 1
 	fi
-	## 去掉//开头 ;  查找key=特征
-	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | tail -1| cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*")
+	## 去掉//开头 ;  查找key=特征，去掉双引号
+	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | tail -1| cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*" | sed 's/\"//g' ) 
+
 	echo $value
 }
 
