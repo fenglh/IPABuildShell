@@ -3,8 +3,8 @@
 
 # ----------------------------------------------------------------------
 # name:         IPABuildShell.sh
-# version:      3.0.0
-# createTime:   2018-05-16
+# version:      3.0.2
+# createTime:   2018-07-17
 # description:  iOS 自动打包
 # author:       冯立海
 # email:        335418265@qq.com

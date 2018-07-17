@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-06-7 18:39"
+date: "2018-07-17 11:52"
 ---
 IPABuildShell
 ==
@@ -14,19 +14,21 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ...
 可选项：
-  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
-  -b | --bundle-id bundleId 			设置Bundle Id
-  -c | --channel <development|app-store|enterprise> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发
-  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
-  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码
-  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式
-  -h | --help					帮助.
-  -x 						脚本执行调试模式.
-  --enable-bitcode <YES/NO> 			是否开启BitCode.
-  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）
-  --env-filename filename 			指定开发和生产环境的配置文件
-  --env-varname varname				指定开发和生产环境的配置变量
-  --env-production <YES/NO>			YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）
+  -a | --archs 	<armv7|arm64|armv7 arm64>    指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
+  -b | --bundle-id bundleId                     设置Bundle Id
+  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发
+  -d | --provision-dir dir                      指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
+  -p | --keychain-password passoword            指定访问证书时解锁钥匙串的密码，即开机密码
+  -t | --configration-type  <Debug|Release>     Debug 调试模式, Release 发布模式
+  -v | --verbose                                输出详细的构建信息
+  -h | --help                                   帮助.
+  -x                                            脚本执行调试模式.
+  --show-profile-detail provisionfile           查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)
+  --enable-bitcode <YES/NO>                     是否开启BitCode.
+  --auto-buildversion <YES/NO>                  是否自动修改构建版本号（设置为当前项目的git版本数量）
+  --env-filename filename                       指定开发和生产环境的配置文件
+  --env-varname varname                         指定开发和生产环境的配置变量
+  --env-production <YES/NO>                     YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）
 ```
 
 功能
@@ -36,7 +38,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 - <font color=#006400 size=3>自动匹配签名身份(Code Signing Identity)</font>
 - 允许指定授权文件目录,脚本将只在该目录匹配授权文件
 - 支持Xcode `8.0`至`9.3`
-- 支持ipa签名方式：development、app-store、enterprise，即内部分发、商店分发、企业分发
+- 支持ipa签名方式：development、app-store、enterprise，ad-hoc，即内部分发、商店分发、企业分发、企业内部分发
 - 支持workplace、cocoapod
 - 自动关闭BitCode，并可配置开关
 - 可配置自动修改内部版本号(Build Version)
@@ -172,6 +174,14 @@ source ~/.bash_profile
 ### 版本更新日志
 
 ```
+# 2018/07/17
+# 版本：3.0.2
+# 1. 增加支持ad-hoc打包格式
+# 2. 增加-v参数输出详细的构建信息
+# 3. 增加--show-profile-detail provisionfile 参数查看授权文件内容
+# 4. 修复无法匹配证书签名ID带有多个连续空格的bug
+#--------------------------------------------
+
 # 2018/06/07
 # 版本：3.0.1
 # 1. 修复备份PackageLog文件夹的一些bug
