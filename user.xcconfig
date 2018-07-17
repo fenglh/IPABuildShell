@@ -20,6 +20,8 @@ AUTO_BUILD_VERSION =
 PROVISION_DIR=
 
 
+
+
 //例如在AppDelegate.h 声明变量 static BOOL isProduction = NO;来控制接口的生产环境和开发环境
 //指定配置接口生产环境的文件名。相当于脚本参数 --env-filename
 API_ENV_FILE_NAME =

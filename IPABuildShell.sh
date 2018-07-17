@@ -131,9 +131,10 @@ function initBuildXcconfig() {
 
 function initUserXcconfig() {
 	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
-		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR CODE_SIGN_IDENTITY)
+		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR )
 		for key in ${allKeys[@]}; do
 			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
+
 			# echo "===$value====="
 			if [[ "$value" ]]; then
 				eval "$key"='$value'
