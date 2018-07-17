@@ -49,7 +49,7 @@ function usage
 	echo "  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
 	echo "  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码"
 	echo "  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式"
-	echo "  -v | --verbose  输出详细的构建信息"
+	echo "  -v | --verbose  				输出详细的构建信息"
 	echo "  -h | --help					帮助."
 	echo "  -x 						脚本执行调试模式."
 
