@@ -45,12 +45,16 @@ function usage
 	echo "可选项："
 	echo "  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
   	echo "  -b | --bundle-id bundleId 			设置Bundle Id"
-  	echo "  -c | --channel <development|app-store|enterprise> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发"
+  	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发"
 	echo "  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
 	echo "  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码"
 	echo "  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式"
+	echo "  -v | --verbose  输出详细的构建信息"
 	echo "  -h | --help					帮助."
 	echo "  -x 						脚本执行调试模式."
+
+	
+	echo "  --show-profile-detail provisionfile 	查看授权文件的信息内容(development、enterprise、app-store、ad-hoc)"
 
 	echo "  --enable-bitcode <YES/NO> 			是否开启BitCode."
 	echo "  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）"
@@ -523,6 +527,17 @@ function getProvisionfileUUID()
 	provisonfileUUID=$($CMD_PlistBuddy -c 'Print :UUID' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
 	echo $provisonfileUUID
 }
+## 获取授权文件TeamName
+function getProvisionfileTeamName()
+{
+	local provisionFile=$1
+	if [[ ! -f "$provisionFile" ]]; then
+		exit 1
+	fi
+	provisonfileTeamName=$($CMD_PlistBuddy -c 'Print :TeamName' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
+	echo $provisonfileTeamName
+}
+
 
 ## 获取授权文件TeamID
 function getProvisionfileTeamID()
@@ -640,7 +655,8 @@ function getProjectBundleId()
 function checkCodeSignIdentityValid()
 {
 	local codeSignIdentity=$1
-	local content=$($CMD_Security find-identity -v -p codesigning | grep "$codeSignIdentity")
+	##tr 将多个空格转变成一个空格
+	local content=$($CMD_Security find-identity -v -p codesigning | tr -s ' ' | grep "$codeSignIdentity")
 	echo "$content"
 }
 
@@ -718,6 +734,8 @@ function getProfileBundleId()
 	echo $bundleId
 }
 
+
+
 ##获取授权文件类型
 function getProfileType()
 {
@@ -761,6 +779,8 @@ function getProfileTypeCNName()
         profileTypeName='商店分发'
     elif [[ "$profileType" == 'enterprise' ]]; then
         profileTypeName='企业分发'
+	elif [[ "$profileType" == 'ad-hoc' ]]; then
+        profileTypeName='内部测试(ad-hoc)'
     else
         profileTypeName='内部测试'
     fi
@@ -790,7 +810,7 @@ function archiveBuild()
 	cmd="$cmd"" -scheme $targetName -archivePath \"$archivePath\" -configuration $CONFIGRATION_TYPE -xcconfig $xcconfigFile clean build"
 
 	local xcpretty=$(getXcprettyPath)
-	if [[ "$xcpretty" ]]; then
+	if [[ $VERBOSE ==  false ]] && [[ "$xcpretty" ]]; then
 		## 格式化日志输出
 		cmd="$cmd"" | xcpretty "
 	fi
@@ -959,6 +979,7 @@ PROVISION_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
 API_ENV_PRODUCTION=''
 API_ENV_FILE_NAME=''
 API_ENV_VARNAME=''
+VERBOSE=false
 
 
 
@@ -992,9 +1013,28 @@ while [ "$1" != "" ]; do
             shift
             UNLOCK_KEYCHAIN_PWD="$1"
             ;;
+        -v | --verbose )
+			VERBOSE=true
+			;;
+
          -x )
 			set -x;;
-            
+        
+        --show-profile-detail )
+			shift
+			provisionFileTeamID=$(getProvisionfileTeamID "$1")
+			provisionFileType=$(getProfileType "$1")
+			provisionFileName=$(getProvisionfileName "$1")
+			provisionFileBundleID=$(getProfileBundleId "$1")
+			provisionfileTeamName=$(getProvisionfileTeamName "$1")
+
+			echo "【授权文件】Name：$provisionFileName "
+			echo "【授权文件】Type：$provisionFileType "
+			echo "【授权文件】TeamID：$provisionFileTeamID "
+			echo "【授权文件】Team Name：$provisionfileTeamName "
+			echo "【授权文件】BundleID：$provisionFileBundleID "
+			exit;
+			;;
       	--enable-bitcode )
             ENABLE_BITCODE='YES'
             ;;
@@ -1196,6 +1236,7 @@ setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE"
 setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$provisionFileName" 
 setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$provisionFileUUID"
 setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$provisionFileTeamID"
+
 setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
 setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
 ## 如果是进行商店分发或则企业分发，那么构建标准arch（即armv7和arm64）
