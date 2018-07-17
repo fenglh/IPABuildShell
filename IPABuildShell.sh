@@ -45,7 +45,7 @@ function usage
 	echo "可选项："
 	echo "  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
   	echo "  -b | --bundle-id bundleId 			设置Bundle Id"
-  	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发"
+  	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发"
 	echo "  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
 	echo "  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码"
 	echo "  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式"
