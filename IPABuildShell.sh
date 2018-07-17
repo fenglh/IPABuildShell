@@ -515,7 +515,7 @@ function getProvisionCodeSignIdentity
 	local codeSignIdentity=$(openssl x509 -noout -text -in "$tmpCerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
 
 
-	echo $codeSignIdentity
+	echo "${codeSignIdentity}"
 }
 
 ## 获取授权文件UUID
@@ -656,8 +656,7 @@ function getProjectBundleId()
 function checkCodeSignIdentityValid()
 {
 	local codeSignIdentity=$1
-	##tr 将多个空格转变成一个空格
-	local content=$($CMD_Security find-identity -v -p codesigning | tr -s ' ' | grep "$codeSignIdentity")
+	local content=$($CMD_Security find-identity -v -p codesigning | grep "$codeSignIdentity")
 	echo "$content"
 }
 
