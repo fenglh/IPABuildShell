@@ -54,7 +54,7 @@ function usage
 	echo "  -x 						脚本执行调试模式."
 
 	
-	echo "  --show-profile-detail provisionfile 	查看授权文件的信息内容(development、enterprise、app-store、ad-hoc)"
+	echo "  --show-profile-detail provisionfile 		查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)"
 
 	echo "  --enable-bitcode <YES/NO> 			是否开启BitCode."
 	echo "  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）"
