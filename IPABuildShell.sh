@@ -514,7 +514,7 @@ function getProvisionCodeSignIdentity
 
 	local codeSignIdentity=$(openssl x509 -noout -text -in "$tmpCerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
 
-
+	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	echo "${codeSignIdentity}"
 }
 
