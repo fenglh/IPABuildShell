@@ -131,7 +131,7 @@ function initBuildXcconfig() {
 
 function initUserXcconfig() {
 	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
-		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR)
+		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR CODE_SIGN_IDENTITY)
 		for key in ${allKeys[@]}; do
 			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
 			# echo "===$value====="
@@ -633,7 +633,7 @@ function getInfoPlistFile()
 	if [[ ! -f "$pbxproj" ]]; then
 		exit 1
 	fi
-   local  infoPlistFileName=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+   local  infoPlistFileName=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$pbxproj" )
 	  ### 完整路径
 	infoPlistFilePath="$1/../$infoPlistFileName"
 	echo $infoPlistFilePath
@@ -1139,7 +1139,7 @@ else
 fi
 logit "【构建信息】Bundle Id：$projectBundleId"
 infoPlistFile=$(getInfoPlistFile "$xcodeprojPath" "$configurationId")
-if [[ ! "$infoPlistFile" ]]; then
+if [[ ! -f "$infoPlistFile" ]]; then
 	errorExit "获取infoPlist文件失败"
 fi
 logit "【构建信息】InfoPlist 文件：$infoPlistFile"
@@ -1313,6 +1313,8 @@ exportDir=${exportPath%/*}
 ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$channelName")
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
 logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
+
+
 
 ##结束时间
 endTimeSeconds=`date +%s`
