@@ -37,7 +37,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 - <font color=#006400 size=3>自动匹配描述文件(Provisioning Profile)</font>
 - <font color=#006400 size=3>自动匹配签名身份(Code Signing Identity)</font>
 - 允许指定授权文件目录,脚本将只在该目录匹配授权文件
-- 支持Xcode `8.0`至`9.3`
+- 支持Xcode `8.0`至`9.4`
 - 支持ipa签名方式：development、app-store、enterprise，ad-hoc，即内部分发、商店分发、企业分发、企业内部分发
 - 支持workplace、cocoapod
 - 自动关闭BitCode，并可配置开关

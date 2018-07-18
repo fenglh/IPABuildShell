@@ -490,9 +490,9 @@ function getProvisionfileExpirationDays()
     echo $expirationDays
 }
 
-## 获取授权文件中的签名id
-function getProvisionCodeSignIdentity
-{
+## 将授权文件的签名数据封装成证书
+function wrapProvisionSignDataToCer {
+
 	local provisionFile=$1
 	if [[ ! -f "$provisionFile" ]]; then
 		exit 1
@@ -510,13 +510,64 @@ function getProvisionCodeSignIdentity
 	echo "-----BEGIN CERTIFICATE-----" 	> "$tmpCerFile"
 	echo "${data}"						>> "$tmpCerFile"
 	echo "-----END CERTIFICATE-----"	>> "$tmpCerFile"
+	echo "${tmpCerFile}"
+}
 
-
-	local codeSignIdentity=$(openssl x509 -noout -text -in "$tmpCerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
-
+## 获取授权文件中的签名id
+function getProvisionCodeSignIdentity
+{
+	local provisionFile=$1
+	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
 	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	echo "${codeSignIdentity}"
 }
+
+## 获取授权文件中指定证书的创建时间
+function getProvisionCodeSignCreateTime {
+	local provisionFile=$1
+	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
+
+	## 得到字符串： Not Before: Sep  7 07:21:52 2017 GMT
+	local startTimeStr=$( openssl x509 -noout -text -in "$cerFile" | grep "Not Before" )
+	## 截图第一个：之后的字符串，得到：Sep  7 07:21:52 2017 GMT
+	startTimeStr=$(echo ${startTimeStr#*:}) ## 截取,echo 去掉前后空格
+
+	## 格式化
+	local startTimestamp=$(date -j -f "%b %d  %T %Y %Z" "$startTimeStr" "+%s")
+
+	echo $(date -r `expr $startTimestamp `  "+%Y年%m月%d" )
+}
+
+
+## 获取授权文件中指定证书的过期时间
+function getProvisionCodeSignExpireTime {
+	local provisionFile=$1
+	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
+
+	## 得到字符串： Not Before: Sep  7 07:21:52 2017 GMT
+	local endTimeStr=$( openssl x509 -noout -text -in "$cerFile" | grep "Not After" )
+
+	## 截图第一个：之后的字符串，得到：Sep  7 07:21:52 2017 GMT
+	endTimeStr=$(echo ${endTimeStr#*:}) ## 截取，echo 去掉前后空格
+	## 格式化
+	local endTimestamp=$(date -j -f "%b %d  %T %Y %Z" "$endTimeStr" "+%s")
+	echo $(date -r `expr $endTimestamp + 86400`  "+%Y年%m月%d" )
+}
+
+
+
+
+
+
+function getProvisionCodeSignSerial {
+	local provisionFile=$1
+	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
+	## 去掉空格
+	local serial=$( openssl x509 -noout -text -in "$cerFile" | grep "Serial Number" | cut -d ':' -f2 | sed 's/^[ ]//g')
+	echo "$serial"
+}
+
 
 ## 获取授权文件UUID
 function getProvisionfileUUID()
@@ -734,6 +785,31 @@ function getProfileBundleId()
 	echo $bundleId
 }
 
+function getProfileInfo(){
+
+			provisionFileTeamID=$(getProvisionfileTeamID "$1")
+			provisionFileType=$(getProfileType "$1")
+			provisionFileName=$(getProvisionfileName "$1")
+			provisionFileBundleID=$(getProfileBundleId "$1")
+			provisionfileTeamName=$(getProvisionfileTeamName "$1")
+			getProvisionfileExpirationDays=$(getProvisionfileExpirationDays "$1")
+			provisionfileCodeSign=$(getProvisionCodeSignIdentity "$1")
+			provisionfileCodeSignSerial=$(getProvisionCodeSignSerial "$1")
+			provisionCodeSignCreateTime=$(getProvisionCodeSignCreateTime "$1")
+			provisionCodeSignExpireTime=$(getProvisionCodeSignExpireTime "$1")
+			
+
+			echo "【授权文件】名字：$provisionFileName "
+			echo "【授权文件】类型：$provisionFileType "
+			echo "【授权文件】TeamID：$provisionFileTeamID "
+			echo "【授权文件】Team Name：$provisionfileTeamName "
+			echo "【授权文件】BundleID：$provisionFileBundleID "
+			echo "【授权文件】有效天数：$getProvisionfileExpirationDays "
+			echo "【授权文件】使用的证书签名ID：$provisionfileCodeSign "
+			echo "【授权文件】使用的证书序列号：$provisionfileCodeSignSerial"
+			echo "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
+			echo "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
+}
 
 
 ##获取授权文件类型
@@ -1019,20 +1095,11 @@ while [ "$1" != "" ]; do
 
          -x )
 			set -x;;
+
         
         --show-profile-detail )
 			shift
-			provisionFileTeamID=$(getProvisionfileTeamID "$1")
-			provisionFileType=$(getProfileType "$1")
-			provisionFileName=$(getProvisionfileName "$1")
-			provisionFileBundleID=$(getProfileBundleId "$1")
-			provisionfileTeamName=$(getProvisionfileTeamName "$1")
-
-			echo "【授权文件】Name：$provisionFileName "
-			echo "【授权文件】Type：$provisionFileType "
-			echo "【授权文件】TeamID：$provisionFileTeamID "
-			echo "【授权文件】Team Name：$provisionfileTeamName "
-			echo "【授权文件】BundleID：$provisionFileBundleID "
+			getProfileInfo "$1"
 			exit;
 			;;
       	--enable-bitcode )
