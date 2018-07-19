@@ -528,6 +528,8 @@ function getProvisionCodeSignCreateTime {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
+    ##切换到英文环境，不然无法转换成时间戳
+    export LANG="en_US.UTF-8"
 	## 得到字符串： Not Before: Sep  7 07:21:52 2017 GMT
 	local startTimeStr=$( openssl x509 -noout -text -in "$cerFile" | grep "Not Before" )
 	## 截图第一个：之后的字符串，得到：Sep  7 07:21:52 2017 GMT
@@ -545,6 +547,9 @@ function getProvisionCodeSignExpireTime {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
+    ##切换到英文环境，不然无法转换成时间戳
+    export LANG="en_US.UTF-8"
+    
 	## 得到字符串： Not Before: Sep  7 07:21:52 2017 GMT
 	local endTimeStr=$( openssl x509 -noout -text -in "$cerFile" | grep "Not After" )
 
