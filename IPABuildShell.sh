@@ -78,7 +78,7 @@ function logit() {
 ## 日志格式化输出
 function errorExit(){
 
-    echo -e "\033[31m【IPA构建失败】$@ \033[0m"
+    echo -e "\033[31m【IPABuildShell】$@ \033[0m"
     exit 1
 }
 
@@ -786,6 +786,10 @@ function getProfileBundleId()
 }
 
 function getProfileInfo(){
+
+			if [[ ! -f "$1" ]]; then
+				errorExit "指定授权文件不存在!"
+			fi
 
 			provisionFileTeamID=$(getProvisionfileTeamID "$1")
 			provisionFileType=$(getProfileType "$1")
