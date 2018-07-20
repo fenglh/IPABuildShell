@@ -253,21 +253,97 @@ function generateOptionsPlist(){
 	echo "$Tmp_Options_Plist_File"
 }
 
-##检查xcodeproj 是否存在
-function checkXcodeprojExist() {
+
+## 例如分割"E52A5D3E1ED7B40100D658B7:BMOnlineManagement:/Users/itx/BMOnlineManagement/BMOnlineManagement.xcworkspace/../BMOnlineManagement.xcodeproj" 
+function getTargetInfoValue(){
+
+	local targetInfo="$1"
+	local key="$2"
+	if [[ "$targetInfo" == "" ]] || [[ "$key" == "" ]]; then
+		errorExit "getTargetInfoValue 函数出错"
+	fi
+
+	local arr=(${targetInfo//:/ })
+	if [[ ${#arr[@]} -lt 3 ]]; then
+		errorExit "getTargetInfoValue 函数出错"
+	fi
+	local value=''
+	if [[ "$key"  == "id" ]]; then
+		value=${arr[0]}
+	elif [[ "$key" == "name" ]]; then
+		value=${arr[1]}
+	elif [[ "$key" == "xcproj" ]]; then
+		value=${arr[2]}
+	fi
+	echo "$value"
+}
+
+
+## 获取workspace的项目路径列表
+function getAllXcprojPathFromWorkspace() {
+	local xcworkspace=$1;
+	local xcworkspacedataFile="$xcworkspace/contents.xcworkspacedata";
+	if [[ ! -f "$xcworkspacedataFile" ]]; then
+		echo "xcworkspace 文件不存在";
+		exit 1;
+	fi
+	local list=($(grep "location =" "$xcworkspacedataFile" | cut -d "\"" -f2 | cut -d ":" -f2))
+	## 补充完整路径
+	local completePathList=()
+	for xcproj in ${list[*]}; do
+		local path="${xcworkspace}/../${xcproj}"
+		## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
+		completePathList=(${completePathList[*]} "$path")
+
+	done
+	echo "${completePathList[*]}"
+}
+
+
+## 获取xcproj的所有target
+function getAllTargetsInfoFromXcprojList() {
+	## 转换成数组
+	local xcprojList=($1)
+	## 因在mac 系统下 在for循环中无法使用map ，所以使用数组来代替，元素格式为 targetId:targetName:xcprojPath
+	local wrapXcprojList=()
+	## 获取每个子工程的target
+	for xcprojPath in ${xcprojList[*]}; do
+
+		local pbxprojPath="$xcprojPath/project.pbxproj"
+		if [[ -f "$pbxprojPath" ]]; then
+			# echo "$pbxprojPath"
+			local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxprojPath")
+			local targetIdList=$($CMD_PlistBuddy -c "Print :objects:${rootObject}:targets" "$pbxprojPath" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
+			#括号用于初始化数组,例如arr=(1,2,3),括号用于初始化数组,例如arr=(1,2,3)
+			local targetIds=($(echo $targetIdList));
+			for targetId in ${targetIds[*]}; do
+				local targetName=$($CMD_PlistBuddy -c "Print :objects:$targetId:name" "$pbxprojPath")
+				## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
+				wrapXcprojList=(${wrapXcprojList[*]} "${targetId}:${targetName}:${xcprojPath}")
+			done
+		fi
+	done
+	echo "${wrapXcprojList[*]}"
+
+}
+
+
+
+##查找xcodeproj工程启动文件
+function findXcodeproj() {
 
 	local xcodeprojPath=$(find "$Shell_Work_Path" -maxdepth 1  -type d -iname "*.xcodeproj")
-	if [[ ! -d "$xcodeprojPath" ]]; then
+	if [[ ! -d "$xcodeprojPath" ]] || [[ ! -f "${xcodeprojPath}/project.pbxproj" ]]; then
 		exit 1
 	fi
 	echo  $xcodeprojPath
 }
 
-##检查xcworkspace 是否存在
-function getXcworkspace() {
+##查找xcworkspace工程启动文件
+function findXcworkspace() {
 
 	local xcworkspace=$(find "$Shell_Work_Path" -maxdepth 1  -type d -iname "*.xcworkspace")
-	if [[ -d "$xcworkspace" ]]; then
+	if [[ -d "$xcworkspace" ]] || [[ -f "${xcworkspace}/contents.xcworkspacedata" ]]; then
 		echo $xcworkspace
 	fi
 }
@@ -619,21 +695,7 @@ function getProvisionfileName()
 }
 
 
-##这里只取第一个target id
-function getBuildTargetId()
-{
-	local pbxproj=$1/project.pbxproj
-	if [[ ! -f "$pbxproj" ]]; then
-		exit 1
-	fi
-	local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxproj")
-	local targetList=$($CMD_PlistBuddy -c "Print :objects:${rootObject}:targets" "$pbxproj" | sed -e '/Array {/d' -e '/}/d' -e 's/^[ \t]*//')
-	#括号用于初始化数组,例如arr=(1,2,3),括号用于初始化数组,例如arr=(1,2,3)
-	local targets=($(echo $targetList));
-	##这里，只取第一个target,因为默认情况下xcode project 会有自动生成Tests 以及 UITests 两个target
-	local targetId=${targets[0]}
-	echo $targetId
-}
+
 
 ##这里只取第一个target
 function getTargetName()
@@ -798,26 +860,29 @@ function getProfileInfo(){
 
 			provisionFileTeamID=$(getProvisionfileTeamID "$1")
 			provisionFileType=$(getProfileType "$1")
+			channelName=$(getProfileTypeCNName $provisionFileType)
 			provisionFileName=$(getProvisionfileName "$1")
 			provisionFileBundleID=$(getProfileBundleId "$1")
 			provisionfileTeamName=$(getProvisionfileTeamName "$1")
-			getProvisionfileExpirationDays=$(getProvisionfileExpirationDays "$1")
+			provisionFileUUID=$(getProvisionfileUUID "$1")
+			provisionFileExpirationDays=$(getProvisionfileExpirationDays "$1")
 			provisionfileCodeSign=$(getProvisionCodeSignIdentity "$1")
 			provisionfileCodeSignSerial=$(getProvisionCodeSignSerial "$1")
 			provisionCodeSignCreateTime=$(getProvisionCodeSignCreateTime "$1")
 			provisionCodeSignExpireTime=$(getProvisionCodeSignExpireTime "$1")
 			
 
-			echo "【授权文件】名字：$provisionFileName "
-			echo "【授权文件】类型：$provisionFileType "
-			echo "【授权文件】TeamID：$provisionFileTeamID "
-			echo "【授权文件】Team Name：$provisionfileTeamName "
-			echo "【授权文件】BundleID：$provisionFileBundleID "
-			echo "【授权文件】有效天数：$getProvisionfileExpirationDays "
-			echo "【授权文件】使用的证书签名ID：$provisionfileCodeSign "
-			echo "【授权文件】使用的证书序列号：$provisionfileCodeSignSerial"
-			echo "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
-			echo "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
+			logit "【授权文件】名字：$provisionFileName "
+			logit "【授权文件】类型：${provisionFileType}（${channelName}）"
+			logit "【授权文件】TeamID：$provisionFileTeamID "
+			logit "【授权文件】Team Name：$provisionfileTeamName "
+			logit "【授权文件】BundleID：$provisionFileBundleID "
+			logit "【授权文件】UUID：$provisionFileUUID "
+			logit "【授权文件】有效天数：$provisionFileExpirationDays "
+			logit "【授权文件】使用的证书签名ID：$provisionfileCodeSign "
+			logit "【授权文件】使用的证书序列号：$provisionfileCodeSignSerial"
+			logit "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
+			logit "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
 }
 
 
@@ -880,7 +945,7 @@ function archiveBuild()
 {
 	local targetName=$1
 	local xcconfigFile=$2
-	local xcworkspacePath=$(getXcworkspace)
+	local xcworkspacePath=$(findXcworkspace)
 
 	## 暂时使用全局变量---
 	archivePath="${Package_Dir}"/$targetName.xcarchive
@@ -1059,6 +1124,7 @@ UNLOCK_KEYCHAIN_PWD=''
 CODE_SIGN_STYLE='Manual'
 UNLOCK_KEYCHAIN_PWD=''
 PROVISION_DIR="${HOME}/Library/MobileDevice/Provisioning Profiles"
+BUILD_TARGET="" ##指定构建的target,默认工程的第一个target
 ## 为了方便脚本配置接口环境（测试/正式）,需要3个参数分别是：接口环境配置文件名、接口环境变量名、接口环境变量值
 ##是否是生产环境，默认为空不做任何修改
 API_ENV_PRODUCTION=''
@@ -1105,7 +1171,10 @@ while [ "$1" != "" ]; do
          -x )
 			set -x;;
 
-        
+		--target )
+			shift 
+			BUILD_TARGET="$1"
+			;;
         --show-profile-detail )
 			shift
 			getProfileInfo "$1"
@@ -1163,25 +1232,81 @@ fi
 logit "【构建信息】Xcode版本：$xcVersion"
 
 
-xcodeprojPath=$(checkXcodeprojExist)
-if [[ ! "$xcodeprojPath" ]]; then
-	errorExit "当前目录不存在Xcodeproj文件，请在工程目录下执行脚本$(basename $0)"
+## 获取xcproj 工程列表
+xcworkspace=$(findXcworkspace)
+
+
+
+
+xcprojPathList=()
+if [[ "$xcworkspace" ]]; then
+	
+	logit "【构建信息】项目结构：多工程协同(workplace)"
+	##  外括号作用是转变为数组
+	xcprojPathList=($(getAllXcprojPathFromWorkspace "$xcworkspace"))
+	num=${#xcprojPathList[@]} ##数组长度 
+	if [[ $num -gt 1 ]]; then
+		i=0
+		for xcproj in ${xcprojPathList[*]}; do
+			i=$(expr $i + 1)
+			logit "【构建信息】工程${i}：${xcproj##*/}"
+		done
+	fi
+
+else
+	## 查找xcodeproj 文件
+	logit "【构建信息】项目结构：单工程"
+	xcodeprojPath=$(findXcodeproj)
+	if [[ "$xcodeprojPath" ]]; then
+		logit "【构建信息】工程路径:$xcodeprojPath"
+	else
+		errorExit "当前目录不存在.xcworkspace或.xcodeproj工程文件，请在项目工程目录下执行脚本$(basename $0)"
+	fi
+	xcprojPathList=($xcodeprojPath)
 fi
 
 
-## 获取构建target Id
-targetId=$(getBuildTargetId "$xcodeprojPath")
-if [[ ! "$targetId" ]]; then
-	errorExit "获取构建Target Id失败"
-fi
-logit "【构建信息】Target Id：$targetId"
+## 构建的xcprojPath列表,即除去Pods.xcodeproj之外的
+buildXcprojPathList=()
+for xcprojPath in ${xcprojPathList[*]}; do
+	if [[ "${xcprojPath##*/}" == "Pods.xcodeproj" ]]; then
+		continue;
+	fi
+	## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
+	buildXcprojPathList=(${buildXcprojPathList[*]} "$xcprojPath")
+done
 
-## 获取target名称
-targetName=$(getTargetName "$xcodeprojPath" $targetId)
-if [[ ! "$targetName" ]]; then
-	errorExit "获取构建Target名字失败"
+logit "【构建信息】可构建的工程数量（非Pods）:${#buildXcprojPathList[*]}"
+
+
+## 获取可构建的工程列表的所有target
+targetsInfoList=($(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}"))
+for targetInfo in ${targetsInfoList[*]}; do
+	targetId=$(getTargetInfoValue "$targetInfo" "id")
+	targetName=$(getTargetInfoValue "$targetInfo" "name")
+	logit "【构建信息】可构建Target：${targetName}（${targetId}）"
+done
+
+
+##获取构建的targetName和targetId 和构建的xcodeprojPath
+targetName=''
+targetId=''
+xcodeprojPath=''
+if [[ ${#buildXcprojPathList[@]} -gt 1 ]]; then
+	## 获取第一个target
+	echo ">1"
+	
+elif [[ ${#buildXcprojPathList[@]} -eq 1 ]]; then
+	## 默认选择第一个target
+	targetInfo=${targetsInfoList[0]}
+	targetId=$(getTargetInfoValue "$targetInfo" "id")
+	targetName=$(getTargetInfoValue "$targetInfo" "name")
+	xcodeprojPath=$(getTargetInfoValue "$targetInfo" "xcproj")
+	logit "【构建信息】默认构建Target：${targetName}（${targetId}）"
+else
+	errorExit "无法找到项目工程文件"
 fi
-logit "【构建信息】Target 名字：$targetName"
+
 
 
 ##获取构配置类型的ID （Release和Debug分别对应不同的ID）
@@ -1189,7 +1314,6 @@ configurationTypeIds=$(getConfigurationIds "$xcodeprojPath" "$targetId")
 if [[ ! "$configurationTypeIds" ]]; then
 	errorExit "获取配置模式(Release和Debug)Id列表失败"
 fi
-logit "【构建信息】配置模式(Release和Debug)Id列表：$configurationTypeIds"
 
 
 
@@ -1256,6 +1380,7 @@ setManulCodeSigningRuby "$xcodeprojPath" "$targetId"
 ##检查openssl
 checkOpenssl
 
+logit "【构建信息】进行授权文件匹配..."
 ## 匹配授权文件
 provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISION_DIR")
 if [[ ! "$provisionFile" ]]; then
@@ -1263,30 +1388,25 @@ if [[ ! "$provisionFile" ]]; then
 fi
 ##导入授权文件
 open "$provisionFile"
-## 授权文件type对应的名字
-channelName=$(getProfileTypeCNName $CHANNEL)
-## 获取授权文件的有效天数
-provisionFileExpirationDays=$(getProvisionfileExpirationDays "$provisionFile")
-provisionFileName=$(getProvisionfileName "$provisionFile")
-provisionFileTeamID=$(getProvisionfileTeamID "$provisionFile")
-provisionFileUUID=$(getProvisionfileUUID "$provisionFile")
-logit "【授权文件】匹配文件Bundle Id：${projectBundleId}"
-logit "【授权文件】匹配文件路径：${provisionFile}"
-logit "【授权文件】匹配文件名称：${provisionFileName}"
-logit "【授权文件】匹配文件TeamID：${provisionFileTeamID}"
-logit "【授权文件】匹配文件UUID：${provisionFileUUID}"
-logit "【授权文件】匹配文件分发渠道：${CHANNEL}(${channelName})"
-logit "【授权文件】匹配文件有效天数：${provisionFileExpirationDays}"
 
 
+logit "【构建信息】匹配授权文件：$provisionFile"
+## 展示授权文件信息
 
+logit "===============授权文件信息==============="
+getProfileInfo "$provisionFile"
+
+
+logit "===============签名信息==================="
 
 codeSignIdentity=$(getProvisionCodeSignIdentity "$provisionFile")
 
 if [[ ! "$codeSignIdentity" ]]; then
 	errorExit "获取授权文件签名失败! 授权文件:${provisionFile}"
 fi
-logit "【授权文件】匹配签名ID：$codeSignIdentity"
+logit "【签名信息】匹配签名ID：$codeSignIdentity"
+
+logit "========================================="
 
 
 result=$(checkCodeSignIdentityValid "$codeSignIdentity")
@@ -1309,9 +1429,9 @@ fi
 setXCconfigWithKeyValue "ENABLE_BITCODE" "$ENABLE_BITCODE"
 setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "$DEBUG_INFORMATION_FORMAT"
 setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE"
-setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$provisionFileName" 
-setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$provisionFileUUID"
-setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$provisionFileTeamID"
+setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$(getProvisionfileName "$provisionFile")" 
+setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$(getProvisionfileUUID "$provisionFile")"
+setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provisionFile")"
 
 setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
 setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
@@ -1386,7 +1506,7 @@ logit "【IPA 信息】IPA和日志重命名"
 exportDir=${exportPath%/*} 
 
 
-ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$channelName")
+ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$(getProfileTypeCNName $CHANNEL)")
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
 logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
 
