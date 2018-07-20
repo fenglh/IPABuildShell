@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-07-17 11:52"
+date: "2018-07-10 14:22"
 ---
 IPABuildShell
 ==
@@ -174,6 +174,13 @@ source ~/.bash_profile
 ### 版本更新日志
 
 ```
+# 2018/07/20
+# 版本：3.0.3
+# 1. 增加-t参数指定构建的Target
+# 2. 优化一些日志输出
+# 3. 使用--debug 参数代替-t | --config-type参数 来指定Debug或Release模式，详见 IPABuildShell -h
+#--------------------------------------------
+
 # 2018/07/17
 # 版本：3.0.2
 # 1. 增加支持ad-hoc打包格式

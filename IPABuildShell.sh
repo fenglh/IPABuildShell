@@ -41,23 +41,23 @@ function usage
 {
 	# setAliasShortCut
 	echo ""
-	echo "Usage:$(basename $0) -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ..."
+	echo "Usage:$(basename $0) -[abcdptvhx] [--enable-bitcode] [--auto-buildversion] ..."
 	echo "可选项："
-	echo "  -a | --archs 	<armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
+	echo "  -a | --archs <armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
   	echo "  -b | --bundle-id bundleId 			设置Bundle Id"
   	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发"
 	echo "  -d | --provision-dir dir 			指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
 	echo "  -p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码"
-	echo "  -t | --configration-type  <Debug|Release> 	Debug 调试模式, Release 发布模式"
+	echo "  -t | --target targetName 			指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target"
 	echo "  -v | --verbose  				输出详细的构建信息"
 	echo "  -h | --help					帮助."
 	echo "  -x 						脚本执行调试模式."
 
 	
 	echo "  --show-profile-detail provisionfile 		查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)"
-
-	echo "  --enable-bitcode <YES/NO> 			是否开启BitCode."
-	echo "  --auto-buildversion <YES/NO>			是否自动修改构建版本号（设置为当前项目的git版本数量）"
+	echo "  --debug 					Debug和Release构建模式，默认Release模式，"
+	echo "  --enable-bitcode  				开启BitCode, 默认不开启"
+	echo "  --auto-buildversion				自动修改构建版本号（设置为当前项目的git版本数量），默认不开启"
 	echo "  --env-filename filename 			指定开发和生产环境的配置文件"
 	echo "  --env-varname varname				指定开发和生产环境的配置变量"
 	echo "  --env-production <YES/NO>			YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）"
@@ -1075,13 +1075,10 @@ function checkIPA()
 	local appBundleId=`$CMD_PlistBuddy -c "print :CFBundleIdentifier" "$ipaInfoPlistFile"`
 	local appVersion=`$CMD_PlistBuddy -c "Print :CFBundleShortVersionString" $ipaInfoPlistFile`
 	local appBuildVersion=`$CMD_PlistBuddy -c "Print :CFBundleVersion" $ipaInfoPlistFile`
-	local appMobileProvisionName=`$CMD_PlistBuddy -c 'Print :Name' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
-	local appMobileProvisionCreationDate=`$CMD_PlistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
-    #授权文件有效时间
-	local appMobileProvisionExpirationDate=`$CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$mobileProvisionFile" 2>/dev/null)`
-	local provisionFileExpirationDays=$(getProvisionfileExpirationDays "$mobileProvisionFile")
-	local provisionType=$(getProfileType "$mobileProvisionFile")
-	local channelName=$(getProfileTypeCNName $provisionType)
+
+	
+
+
 	local appCodeSignIdenfifier=$($CMD_Codesign -dvvv "$app" 2>/tmp/log.txt &&  grep Authority /tmp/log.txt | head -n 1 | cut -d "=" -f2)
 	#支持最小的iOS版本
 	local supportMinimumOSVersion=$($CMD_PlistBuddy -c "print :MinimumOSVersion" "$ipaInfoPlistFile")
@@ -1097,11 +1094,8 @@ function checkIPA()
 	logit "【IPA 信息】支持最低iOS版本:$supportMinimumOSVersion"
 	logit "【IPA 信息】支持的archs:$supportArchitectures"
 	logit "【IPA 信息】签名:$appCodeSignIdenfifier"
-	logit "【IPA 信息】授权文件:${appMobileProvisionName}.mobileprovision"
-	logit "【IPA 信息】授权文件创建时间:$appMobileProvisionCreationDate"
-	logit "【IPA 信息】授权文件过期时间:$appMobileProvisionExpirationDate"
-    logit "【IPA 信息】授权文件有效天数：${provisionFileExpirationDays} 天"
-    logit "【IPA 信息】授权文件分发渠道：${channelName}($provisionType)"
+
+	getProfileInfo "$mobileProvisionFile"
 
     ## 清除解压出来的Playload
     rm -rf ${Package_Dir}/Payload
@@ -1152,9 +1146,9 @@ while [ "$1" != "" ]; do
             shift
             PROVISION_DIR="$1"
             ;;
-        -t | --configration-type )
+        -t | --target)
             shift
-            CONFIGRATION_TYPE="$1"
+			BUILD_TARGET="$1"
             ;;
         -a| --archs )
             shift
@@ -1170,10 +1164,9 @@ while [ "$1" != "" ]; do
 
          -x )
 			set -x;;
-
-		--target )
-			shift 
-			BUILD_TARGET="$1"
+		--debug )
+			shift
+			CONFIGRATION_TYPE="Debug"
 			;;
         --show-profile-detail )
 			shift
@@ -1276,15 +1269,20 @@ for xcprojPath in ${xcprojPathList[*]}; do
 	buildXcprojPathList=(${buildXcprojPathList[*]} "$xcprojPath")
 done
 
-logit "【构建信息】可构建的工程数量（非Pods）:${#buildXcprojPathList[*]}"
+logit "【构建信息】可构建的工程数量（不含Pods）:${#buildXcprojPathList[*]}"
 
 
 ## 获取可构建的工程列表的所有target
 targetsInfoList=($(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}"))
+logit "【构建信息】可构建的Target数量（不含Pods）:${#targetsInfoList[*]}"
+i=1
 for targetInfo in ${targetsInfoList[*]}; do
-	targetId=$(getTargetInfoValue "$targetInfo" "id")
-	targetName=$(getTargetInfoValue "$targetInfo" "name")
-	logit "【构建信息】可构建Target：${targetName}（${targetId}）"
+
+	tId=$(getTargetInfoValue "$targetInfo" "id")
+	tName=$(getTargetInfoValue "$targetInfo" "name")
+	logit "【构建信息】可构建Target${i}：${tName}"
+	i=$(expr $i + 1 )
+
 done
 
 
@@ -1293,20 +1291,39 @@ targetName=''
 targetId=''
 xcodeprojPath=''
 if [[ ${#buildXcprojPathList[@]} -gt 1 ]]; then
-	## 获取第一个target
-	echo ">1"
-	
+	if [[ "$BUILD_TARGET" ]]; then
+		for targetInfo in ${targetsInfoList[*]}; do
+			tId=$(getTargetInfoValue "$targetInfo" "id")
+			tName=$(getTargetInfoValue "$targetInfo" "name")
+			path=$(getTargetInfoValue "$targetInfo" "xcproj")
+			if [[ "$tName" == "$BUILD_TARGET" ]]; then
+				targetName="$tName"
+				targetId="$tId"
+				xcodeprojPath="$path"
+				break;
+			fi
+
+		done
+	else
+		errorExit "当前项目为${#buildXcprojPathList[*]}个工程协同，并有多个可构建的Target, 请使用\"-t target\" 来指定要构建的target"
+	fi
+
 elif [[ ${#buildXcprojPathList[@]} -eq 1 ]]; then
 	## 默认选择第一个target
 	targetInfo=${targetsInfoList[0]}
 	targetId=$(getTargetInfoValue "$targetInfo" "id")
 	targetName=$(getTargetInfoValue "$targetInfo" "name")
 	xcodeprojPath=$(getTargetInfoValue "$targetInfo" "xcproj")
-	logit "【构建信息】默认构建Target：${targetName}（${targetId}）"
+	
 else
 	errorExit "无法找到项目工程文件"
 fi
 
+logit "【构建信息】构建Target：${targetName}（${targetId}）"
+
+if [[ ! "targetName" ]] || [[ ! "targetId" ]] || [[ ! "xcodeprojPath" ]]; then
+	errorExit "获取构建信息失败!"
+fi
 
 
 ##获取构配置类型的ID （Release和Debug分别对应不同的ID）
@@ -1323,7 +1340,7 @@ if [[ ! "$configurationId" ]]; then
 	errorExit "获取${CONFIGRATION_TYPE}配置模式Id失败"
 fi
 logit "【构建信息】配置模式：$CONFIGRATION_TYPE"
-logit "【构建信息】配置模式Id：$configurationId"
+
 
 
 ## 获取Bundle Id
@@ -1392,30 +1409,18 @@ open "$provisionFile"
 
 logit "【构建信息】匹配授权文件：$provisionFile"
 ## 展示授权文件信息
-
-logit "===============授权文件信息==============="
 getProfileInfo "$provisionFile"
 
-
-logit "===============签名信息==================="
-
+## 获取签名
 codeSignIdentity=$(getProvisionCodeSignIdentity "$provisionFile")
-
 if [[ ! "$codeSignIdentity" ]]; then
 	errorExit "获取授权文件签名失败! 授权文件:${provisionFile}"
 fi
 logit "【签名信息】匹配签名ID：$codeSignIdentity"
-
-logit "========================================="
-
-
 result=$(checkCodeSignIdentityValid "$codeSignIdentity")
 if [[ ! "$result" ]]; then
 	errorExit "签名ID:${codeSignIdentity}无效，请检查钥匙串是否导入对应的证书或脚本访问keychain权限不足，请使用-p参数指定密码 "
 fi
-
-
-
 
 
 
@@ -1424,15 +1429,12 @@ xcconfigFile=$(initBuildXcconfig)
 if [[ "$xcconfigFile" ]]; then
 	logit "【签名设置】初始化XCconfig配置文件：$xcconfigFile"
 fi
-
-
 setXCconfigWithKeyValue "ENABLE_BITCODE" "$ENABLE_BITCODE"
 setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "$DEBUG_INFORMATION_FORMAT"
 setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE"
 setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$(getProvisionfileName "$provisionFile")" 
 setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$(getProvisionfileUUID "$provisionFile")"
 setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provisionFile")"
-
 setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
 setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
 ## 如果是进行商店分发或则企业分发，那么构建标准arch（即armv7和arm64）
