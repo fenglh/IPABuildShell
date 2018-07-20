@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-07-10 14:22"
+date: "2018-07-20 14:22"
 ---
 IPABuildShell
 ==
@@ -14,21 +14,22 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ...
 可选项：
-  -a | --archs 	<armv7|arm64|armv7 arm64>    指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
-  -b | --bundle-id bundleId                     设置Bundle Id
-  -c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发
-  -d | --provision-dir dir                      指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
-  -p | --keychain-password passoword            指定访问证书时解锁钥匙串的密码，即开机密码
-  -t | --configration-type  <Debug|Release>     Debug 调试模式, Release 发布模式
-  -v | --verbose                                输出详细的构建信息
-  -h | --help                                   帮助.
-  -x                                            脚本执行调试模式.
-  --show-profile-detail provisionfile           查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)
-  --enable-bitcode <YES/NO>                     是否开启BitCode.
-  --auto-buildversion <YES/NO>                  是否自动修改构建版本号（设置为当前项目的git版本数量）
-  --env-filename filename                       指定开发和生产环境的配置文件
-  --env-varname varname                         指定开发和生产环境的配置变量
-  --env-production <YES/NO>                     YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）
+-a | --archs <armv7|arm64|armv7 arm64> 	指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
+-b | --bundle-id bundleId 			     设置Bundle Id
+-c | --channel <development|app-store|enterprise|ad-hoc> 	指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发
+-d | --provision-dir dir 			      指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
+-p | --keychain-password passoword 		指定访问证书时解锁钥匙串的密码，即开机密码
+-t | --target targetName 			      指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target
+-v | --verbose  				           输出详细的构建信息
+-h | --help					            帮助.
+-x 						                脚本执行调试模式.
+--show-profile-detail provisionfile 	   查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)
+--debug 					               Debug和Release构建模式，默认Release模式，
+--enable-bitcode  				         开启BitCode, 默认不开启
+--auto-buildversion				        自动修改构建版本号（设置为当前项目的git版本数量），默认不开启
+--env-filename filename 			       指定开发和生产环境的配置文件
+--env-varname varname				      指定开发和生产环境的配置变量
+--env-production <YES/NO>			      YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）
 ```
 
 功能
