@@ -260,10 +260,14 @@ function getTargetInfoValue(){
 	local targetInfo="$1"
 	local key="$2"
 	if [[ "$targetInfo" == "" ]] || [[ "$key" == "" ]]; then
-		errorExit "getTargetInfoValue 函数出错"
+		errorExit "getTargetInfoValue 参数不能为空"
 	fi
 
-	local arr=(${targetInfo//:/ })
+	## 更换数组分隔符
+	OLD_IFS="$IFS"
+	IFS=":"
+	local arr=($targetInfo)
+	IFS="$OLD_IFS"
 	if [[ ${#arr[@]} -lt 3 ]]; then
 		errorExit "getTargetInfoValue 函数出错"
 	fi
@@ -301,11 +305,12 @@ function getAllXcprojPathFromWorkspace() {
 
 
 ## 获取xcproj的所有target
+## 比分数组元素本身带有空格，所以采用字符串用“;”作为分隔符，而不是用数组。
 function getAllTargetsInfoFromXcprojList() {
 	## 转换成数组
 	local xcprojList=($1)
 	## 因在mac 系统下 在for循环中无法使用map ，所以使用数组来代替，元素格式为 targetId:targetName:xcprojPath
-	local wrapXcprojList=()
+	local wrapXcprojList='' ##
 	## 获取每个子工程的target
 	for xcprojPath in ${xcprojList[*]}; do
 
@@ -318,12 +323,18 @@ function getAllTargetsInfoFromXcprojList() {
 			local targetIds=($(echo $targetIdList));
 			for targetId in ${targetIds[*]}; do
 				local targetName=$($CMD_PlistBuddy -c "Print :objects:$targetId:name" "$pbxprojPath")
+				local info="${targetId}:${targetName}:${xcprojPath}"
 				## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
-				wrapXcprojList=(${wrapXcprojList[*]} "${targetId}:${targetName}:${xcprojPath}")
+				if [[ ! "$wrapXcprojList" ]]; then
+					wrapXcprojList="$info"
+				else
+					wrapXcprojList="${wrapXcprojList[*]};${info}"			
+				fi
+				
 			done
 		fi
 	done
-	echo "${wrapXcprojList[*]}"
+	echo "$wrapXcprojList"
 
 }
 
@@ -1273,17 +1284,25 @@ logit "【构建信息】可构建的工程数量（不含Pods）:${#buildXcproj
 
 
 ## 获取可构建的工程列表的所有target
-targetsInfoList=($(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}"))
+targetsInfoList=$(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}")
+
+## 设置数组分隔符号为分号
+OLD_IFS="$IFS" ##记录当前分隔符号
+IFS=";"
+targetsInfoList=($targetsInfoList)
+
 logit "【构建信息】可构建的Target数量（不含Pods）:${#targetsInfoList[*]}"
+
 i=1
 for targetInfo in ${targetsInfoList[*]}; do
-
 	tId=$(getTargetInfoValue "$targetInfo" "id")
 	tName=$(getTargetInfoValue "$targetInfo" "name")
 	logit "【构建信息】可构建Target${i}：${tName}"
 	i=$(expr $i + 1 )
-
 done
+
+IFS="$OLD_IFS" ##还原
+
 
 
 ##获取构建的targetName和targetId 和构建的xcodeprojPath

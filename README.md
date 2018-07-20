@@ -84,14 +84,21 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 
 
 
-  打开终端，`cd`到工程目录，执行下面命令开始构建你的ipa
+  打开终端，`cd`到工程目录，执行下面命令开始构建你的ipa, 直接构建
+
 
   ```
   /脚本目录/IPABuildShell.sh
   ```
-![](http://ozhqm0ga1.bkt.clouddn.com/8199e1d7a213105433b557c291876294.png)
-![](http://ozhqm0ga1.bkt.clouddn.com/9dbfcf031faca442f1dcc30d1790cbb8.png)
 
+![](http://ozhqm0ga1.bkt.clouddn.com/3.png)
+
+或者指定构建的Target
+```
+/脚本目录/IPABuildShell.sh -target "Test_Main"
+```
+![](http://ozhqm0ga1.bkt.clouddn.com/1.jpg)
+![](http://ozhqm0ga1.bkt.clouddn.com/2.jpg)
 
 
 user.xcconfig 文件说明
