@@ -1456,13 +1456,7 @@ setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$(getProvisionfileUUID "$provisi
 setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provisionFile")"
 setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
 setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
-## 如果是进行商店分发或则企业分发，那么构建标准arch（即armv7和arm64）
-if [[ "$CHANNEL" == 'app-store' ]]|| [[ "$CHANNEL" == 'enterprise' ]] ; then
-	setXCconfigWithKeyValue "ARCHS" "armv7 arm64"
-else
-	## 构建默认arch或者用户指定archs
-	setXCconfigWithKeyValue "ARCHS" "$ARCHS"
-fi
+setXCconfigWithKeyValue "ARCHS" "$ARCHS"
 
 
 
