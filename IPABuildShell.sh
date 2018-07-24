@@ -1128,7 +1128,7 @@ function generalIPABuildShellVersion(){
 
 
 
-IPABuildShell_Version='3.0.3(215)'
+IPABuildShell_Version='3.0.3(217)'
 
 ## 默认配置
 CONFIGRATION_TYPE='Release'
