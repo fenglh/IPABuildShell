@@ -1113,10 +1113,22 @@ function checkIPA()
 }
 
 
+### 用来显示版本号的
+function generalIPABuildShellVersion(){
+	if [[ -d "${Shell_Work_Path}/.git" ]]; then
+		gitVersionCount=`git -C "$Shell_Work_Path" rev-list HEAD | wc -l | grep -o "[^ ]\+\( \+[^ ]\+\)*"`
+		logit "${gitVersionCount}"
+	fi
+
+
+}
+
 
 ################################################################################################
 
 
+
+IPABuildShell_Version='3.0.3(211)'
 
 ## 默认配置
 CONFIGRATION_TYPE='Release'
@@ -1172,6 +1184,10 @@ while [ "$1" != "" ]; do
         -v | --verbose )
 			VERBOSE=true
 			;;
+        -V | --version )
+			generalIPABuildShellVersion
+			exit;
+			;;
 
          -x )
 			set -x;;
@@ -1220,6 +1236,8 @@ done
 
 ##构建开始时间
 startTimeSeconds=`date +%s`
+
+logit "【版本信息】IPABuildShell Version：${IPABuildShell_Version}"
 historyBackup
 ## 初始化用户配置
 initUserXcconfig
