@@ -91,13 +91,13 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
   /脚本目录/IPABuildShell.sh
   ```
 
-![](http://ozhqm0ga1.bkt.clouddn.com/3.png)
+![](http://ozhqm0ga1.bkt.clouddn.com/11.png)
 
 或者指定构建的Target
 ```
 /脚本目录/IPABuildShell.sh -target "Test_Main"
 ```
-![](http://ozhqm0ga1.bkt.clouddn.com/11.png)
+
 ![](http://ozhqm0ga1.bkt.clouddn.com/22.png)
 
 
