@@ -308,13 +308,14 @@ function getAllXcprojPathFromWorkspace() {
 ## 比分数组元素本身带有空格，所以采用字符串用“;”作为分隔符，而不是用数组。
 function getAllTargetsInfoFromXcprojList() {
 	## 转换成数组
-	local xcprojList=($1)
-	## 因在mac 系统下 在for循环中无法使用map ，所以使用数组来代替，元素格式为 targetId:targetName:xcprojPath
-	local wrapXcprojList='' ##
-	## 获取每个子工程的target
-	for xcprojPath in ${xcprojList[*]}; do
+	local xcprojList=$1
 
-		local pbxprojPath="$xcprojPath/project.pbxproj"
+	## 因在mac 系统下 在for循环中无法使用map ，所以使用数组来代替，元素格式为 targetId:targetName:xcprojPath
+	local wrapXcprojListStr='' ##
+	## 获取每个子工程的target
+	for (( i = 0; i < ${#xcprojList[*]}; i++ )); do
+		local xcprojPath=${xcprojList[i]};
+		local pbxprojPath="${xcprojPath}/project.pbxproj"
 		if [[ -f "$pbxprojPath" ]]; then
 			# echo "$pbxprojPath"
 			local rootObject=$($CMD_PlistBuddy -c "Print :rootObject" "$pbxprojPath")
@@ -324,17 +325,16 @@ function getAllTargetsInfoFromXcprojList() {
 			for targetId in ${targetIds[*]}; do
 				local targetName=$($CMD_PlistBuddy -c "Print :objects:$targetId:name" "$pbxprojPath")
 				local info="${targetId}:${targetName}:${xcprojPath}"
-				## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
-				if [[ ! "$wrapXcprojList" ]]; then
-					wrapXcprojList="$info"
+				if [[ "$wrapXcprojListStr" == '' ]]; then
+					wrapXcprojListStr="$info";
 				else
-					wrapXcprojList="${wrapXcprojList[*]};${info}"			
+					wrapXcprojListStr="${wrapXcprojListStr};${info}";
+
 				fi
-				
 			done
 		fi
 	done
-	echo "$wrapXcprojList"
+	echo "$wrapXcprojListStr"
 
 }
 
@@ -1284,32 +1284,35 @@ else
 	else
 		errorExit "当前目录不存在.xcworkspace或.xcodeproj工程文件，请在项目工程目录下执行脚本$(basename $0)"
 	fi
-	xcprojPathList=($xcodeprojPath)
+	xcprojPathList=("$xcodeprojPath")
 fi
 
 
 ## 构建的xcprojPath列表,即除去Pods.xcodeproj之外的
 buildXcprojPathList=()
-for xcprojPath in ${xcprojPathList[*]}; do
-	if [[ "${xcprojPath##*/}" == "Pods.xcodeproj" ]]; then
+
+for (( i = 0; i < ${#xcprojPathList[*]}; i++ )); do
+	path=${xcprojPathList[i]};
+	if [[ "${path##*/}" == "Pods.xcodeproj" ]]; then
 		continue;
 	fi
 	## 数组追加元素括号里面第一个参数不能用双引号，否则会多出一个空格
-	buildXcprojPathList=(${buildXcprojPathList[*]} "$xcprojPath")
+	buildXcprojPathList=(${buildXcprojPathList[*]} "$path")
 done
-
 logit "【构建信息】可构建的工程数量（不含Pods）:${#buildXcprojPathList[*]}"
 
 
 ## 获取可构建的工程列表的所有target
-targetsInfoList=$(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}")
+targetsInfoListStr=$(getAllTargetsInfoFromXcprojList "${buildXcprojPathList[*]}")
+
 
 ## 设置数组分隔符号为分号
 OLD_IFS="$IFS" ##记录当前分隔符号
 IFS=";"
-targetsInfoList=($targetsInfoList)
+targetsInfoList=($targetsInfoListStr)
 
 logit "【构建信息】可构建的Target数量（不含Pods）:${#targetsInfoList[*]}"
+
 
 i=1
 for targetInfo in ${targetsInfoList[*]}; do
