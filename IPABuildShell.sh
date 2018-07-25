@@ -3,8 +3,8 @@
 
 # ----------------------------------------------------------------------
 # name:         IPABuildShell.sh
-# version:      3.0.2
-# createTime:   2018-07-17
+# version:      3.0.3(218)
+# createTime:   2018-07-25
 # description:  iOS 自动打包
 # author:       冯立海
 # email:        335418265@qq.com
@@ -558,23 +558,17 @@ function setIPAEnvFile () {
 	sed -i ".bak" "/[ ]*$apiEnvVarName[ ]*=/s/=.*/= $apiEnvVarValue;\/\/脚本自动设置/" "$apiEnvFile" && rm -rf ${apiEnvFile}.bak
 }
 
-##获取授权文件过期天数
-function getProvisionfileExpirationDays()
-{
-    local provisionFile=$1
 
-    if [[ ! -f "$provisionFile" ]]; then
-    	exit 1
-    fi
-    ##切换到英文环境，不然无法转换成时间戳
-    export LANG="en_US.UTF-8"
-    ##获取授权文件的过期时间
-    local profileExpirationDate=$($CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
-    local profileExpirationTimestamp=$(date -j -f "%a %b %d  %T %Z %Y" "$profileExpirationDate" "+%s")
+
+##获取授权文件过期天数
+function getExpiretionDays()
+{
+
+	local expireTimestamp=$1
     local nowTimestamp=`date +%s`
-    local r=$[profileExpirationTimestamp-nowTimestamp]
-    local expirationDays=$[r/60/60/24]
-    echo $expirationDays
+    local r=$[expireTimestamp-nowTimestamp]
+    local days=$[r/60/60/24]
+    echo $days
 }
 
 ## 将授权文件的签名数据封装成证书
@@ -610,8 +604,30 @@ function getProvisionCodeSignIdentity
 	echo "${codeSignIdentity}"
 }
 
+function getProvisionfileCreateTimestmap {
+	local provisionFile=$1
+	##切换到英文环境，不然无法转换成时间戳
+    export LANG="en_US.UTF-8"
+    ##获取授权文件的过期时间
+    local createTime=`$CMD_PlistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/tmp/log.txt)`
+    local timestamp=`date -j -f "%a %b %d  %T %Z %Y" "$createTime" "+%s"`
+    # echo $(date -r `expr $timestamp `  "+%Y年%m月%d" )
+    echo "$timestamp"
+}
+
+function getProvisionfileExpireTimestmap {
+	local provisionFile=$1
+	    ##切换到英文环境，不然无法转换成时间戳
+    export LANG="en_US.UTF-8"
+    ##获取授权文件的过期时间
+    local expirationTime=`$CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/tmp/log.txt)`
+    local timestamp=`date -j -f "%a %b %d  %T %Z %Y" "$expirationTime" "+%s"`
+    # echo $(date -r `expr $timestamp `  "+%Y年%m月%d" )
+    echo "$timestamp"
+}
+
 ## 获取授权文件中指定证书的创建时间
-function getProvisionCodeSignCreateTime {
+function getProvisionCodeSignCreateTimestamp {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
@@ -624,13 +640,13 @@ function getProvisionCodeSignCreateTime {
 
 	## 格式化
 	local startTimestamp=$(date -j -f "%b %d  %T %Y %Z" "$startTimeStr" "+%s")
-
-	echo $(date -r `expr $startTimestamp `  "+%Y年%m月%d" )
+	# echo $(date -r `expr $startTimestamp `  "+%Y年%m月%d" )
+	echo "$startTimestamp"
 }
 
 
 ## 获取授权文件中指定证书的过期时间
-function getProvisionCodeSignExpireTime {
+function getProvisionCodeSignExpireTimestamp {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
@@ -643,8 +659,9 @@ function getProvisionCodeSignExpireTime {
 	## 截图第一个：之后的字符串，得到：Sep  7 07:21:52 2017 GMT
 	endTimeStr=$(echo ${endTimeStr#*:}) ## 截取，echo 去掉前后空格
 	## 格式化
-	local endTimestamp=$(date -j -f "%b %d  %T %Y %Z" "$endTimeStr" "+%s")
-	echo $(date -r `expr $endTimestamp + 86400`  "+%Y年%m月%d" )
+	local expireTimestamp=$(date -j -f "%b %d  %T %Y %Z" "$endTimeStr" "+%s")
+	# echo $(date -r `expr $expireTimestamp + 86400`  "+%Y年%m月%d" )
+	echo "$expireTimestamp"
 }
 
 
@@ -830,18 +847,18 @@ function matchMobileProvisionFile()
 	fi
 	##遍历
 	local provisionFile=''
-	local provisionFileExpirationDays=0
+	local maxExpireTimestmap=0
 
 	for file in "${mobileProvisionFileDir}"/*.mobileprovision; do
 		local bundleIdFromProvisionFile=$(getProfileBundleId "$file")
 		if [[ "$bundleIdFromProvisionFile" ]] && [[ "$appBundleId" == "$bundleIdFromProvisionFile" ]]; then
 			local profileType=$(getProfileType "$file")
 			if [[ "$profileType" == "$channel" ]]; then
-				local expirationDays=$(getProvisionfileExpirationDays "$file")
+				local timestmap=$(getProvisionfileExpireTimestmap "$file")
 				## 匹配到有效天数最大的授权文件
-				if [[ $expirationDays -gt $provisionFileExpirationDays ]]; then
+				if [[ $timestmap -gt $maxExpireTimestmap ]]; then
 					provisionFile=$file
-					provisionFileExpirationDays=$expirationDays
+					maxExpireTimestmap=$timestmap
 				fi
 			fi
 		fi
@@ -869,6 +886,9 @@ function getProfileInfo(){
 				errorExit "指定授权文件不存在!"
 			fi
 
+			
+  			
+
 			provisionFileTeamID=$(getProvisionfileTeamID "$1")
 			provisionFileType=$(getProfileType "$1")
 			channelName=$(getProfileTypeCNName $provisionFileType)
@@ -876,11 +896,21 @@ function getProfileInfo(){
 			provisionFileBundleID=$(getProfileBundleId "$1")
 			provisionfileTeamName=$(getProvisionfileTeamName "$1")
 			provisionFileUUID=$(getProvisionfileUUID "$1")
-			provisionFileExpirationDays=$(getProvisionfileExpirationDays "$1")
+
+  			provisionfileCreateTimestmap=$(getProvisionfileCreateTimestmap "$1")
+  			provisionfileCreateTime=$(date -r `expr $provisionfileCreateTimestmap `  "+%Y年%m月%d" )
+  			provisionfileExpireTimestmap=$(getProvisionfileExpireTimestmap "$1")
+  			provisionfileExpireTime=$(date -r `expr $provisionfileExpireTimestmap `  "+%Y年%m月%d" )
+			provisionFileExpirationDays=$(getExpiretionDays "$provisionfileExpireTimestmap")
+
 			provisionfileCodeSign=$(getProvisionCodeSignIdentity "$1")
 			provisionfileCodeSignSerial=$(getProvisionCodeSignSerial "$1")
-			provisionCodeSignCreateTime=$(getProvisionCodeSignCreateTime "$1")
-			provisionCodeSignExpireTime=$(getProvisionCodeSignExpireTime "$1")
+
+			provisionCodeSignCreateTimestmap=$(getProvisionCodeSignCreateTimestamp "$1")
+			provisionCodeSignCreateTime=$(date -r `expr $provisionCodeSignCreateTimestmap `  "+%Y年%m月%d" )
+			provisionCodeSignExpireTimestamp=$(getProvisionCodeSignExpireTimestamp "$1")
+			provisionCodeSignExpireTime=$(date -r `expr $provisionCodeSignExpireTimestamp + 86400`  "+%Y年%m月%d" )
+			provisionCodesignExpirationDays=$(getExpiretionDays "$provisionCodeSignExpireTimestamp")
 			
 
 			logit "【授权文件】名字：$provisionFileName "
@@ -889,11 +919,14 @@ function getProfileInfo(){
 			logit "【授权文件】Team Name：$provisionfileTeamName "
 			logit "【授权文件】BundleID：$provisionFileBundleID "
 			logit "【授权文件】UUID：$provisionFileUUID "
+			logit "【授权文件】创建时间：$provisionfileCreateTime "
+			logit "【授权文件】过期时间：$provisionfileExpireTime "
 			logit "【授权文件】有效天数：$provisionFileExpirationDays "
 			logit "【授权文件】使用的证书签名ID：$provisionfileCodeSign "
 			logit "【授权文件】使用的证书序列号：$provisionfileCodeSignSerial"
 			logit "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
 			logit "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
+			logit "【授权文件】使用的证书有效天数：$provisionCodesignExpirationDays "
 }
 
 
@@ -1128,7 +1161,6 @@ function generalIPABuildShellVersion(){
 
 
 
-IPABuildShell_Version='3.0.3(217)'
 
 ## 默认配置
 CONFIGRATION_TYPE='Release'
@@ -1237,7 +1269,7 @@ done
 ##构建开始时间
 startTimeSeconds=`date +%s`
 
-logit "【版本信息】IPABuildShell Version：${IPABuildShell_Version}"
+
 historyBackup
 ## 初始化用户配置
 initUserXcconfig
