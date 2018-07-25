@@ -38,6 +38,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 - <font color=#006400 size=3>自动匹配最新的描述文件(Provisioning Profile)</font>
 - <font color=#006400 size=3>自动匹配签名身份(Code Signing Identity)</font>
 - 支持`--show-profile-detail provisionfile` 查看授权文件类型、创建日期、过期日期、使用证书签名ID、使用证书的创建日期等
+
   ```
   bluemoon007deiMac:RFIDAPP itx$ IPABuildShell.sh  --show-profile-detail "/Users/itx/Library/MobileDevice/Provisioning Profiles/bc64dd0a-bc32-4015-a5a8-04da1d97a646.mobileprovision"
  [IPABuildShell]  【授权文件】名字：dev_lipeiyao
@@ -55,6 +56,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
  [IPABuildShell]  【授权文件】使用的证书过期时间：2019年05月24
  [IPABuildShell]  【授权文件】使用的证书有效天数：302
   ```
+  
 - 允许指定授权文件目录,脚本将只在该目录匹配授权文件
 - 支持Xcode `8.0`至`9.4`
 - 支持ipa签名方式：development、app-store、enterprise，ad-hoc，即内部分发、商店分发、企业分发、企业内部分发
