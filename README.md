@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-07-20 14:22"
+date: "2018-07-25 10:27"
 ---
 IPABuildShell
 ==
@@ -37,12 +37,29 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 
 - <font color=#006400 size=3>自动匹配最新的描述文件(Provisioning Profile)</font>
 - <font color=#006400 size=3>自动匹配签名身份(Code Signing Identity)</font>
+- 支持`--show-profile-detail provisionfile` 查看授权文件类型、创建日期、过期日期、使用证书签名ID、使用证书的创建日期等
+  ```
+  bluemoon007deiMac:RFIDAPP itx$ IPABuildShell.sh  --show-profile-detail "/Users/itx/Library/MobileDevice/Provisioning Profiles/bc64dd0a-bc32-4015-a5a8-04da1d97a646.mobileprovision"
+ [IPABuildShell]  【授权文件】名字：dev_lipeiyao
+ [IPABuildShell]  【授权文件】类型：development（内部测试）
+ [IPABuildShell]  【授权文件】TeamID：5JP793NCMQ
+ [IPABuildShell]  【授权文件】Team Name：Lihai Feng
+ [IPABuildShell]  【授权文件】BundleID：cn.com.itx.lipeiyao
+ [IPABuildShell]  【授权文件】UUID：bc64dd0a-bc32-4015-a5a8-04da1d97a646
+ [IPABuildShell]  【授权文件】创建时间：2018年06月04
+ [IPABuildShell]  【授权文件】过期时间：2019年06月04
+ [IPABuildShell]  【授权文件】有效天数：314
+ [IPABuildShell]  【授权文件】使用的证书签名ID：iPhone Developer: Lihai Feng (6N464U2W5R)
+ [IPABuildShell]  【授权文件】使用的证书序列号：6706890764097142373 (0x5d13a99d855bbe65)
+ [IPABuildShell]  【授权文件】使用的证书创建时间：2018年05月23
+ [IPABuildShell]  【授权文件】使用的证书过期时间：2019年05月24
+ [IPABuildShell]  【授权文件】使用的证书有效天数：302
+  ```
 - 允许指定授权文件目录,脚本将只在该目录匹配授权文件
 - 支持Xcode `8.0`至`9.4`
 - 支持ipa签名方式：development、app-store、enterprise，ad-hoc，即内部分发、商店分发、企业分发、企业内部分发
 - 支持workplace、cocoapod
 - 支持多工程协同项目使用`-t targetName` 指定构建target
-- 支持`--show-profile-detail provisionfile` 查看授权文件类型、创建日期、过期日期、使用证书签名ID、使用证书的创建日期等
 - 自动关闭BitCode，并可配置开关
 - 可配置自动修改内部版本号(Build Version)
 - 可配置修改接口生产环境和开发环境
@@ -58,11 +75,12 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 
 注1：
 
- IPA分发途径，支持常用的3种：
+ IPA分发途径，支持常用的4种：
 
-    - 内部测试：用于给我们内部人员测试使用的，用户通过使用“同步助手”、“APP助手”等工具安装
-    - 商店分发：用于提交到商店审核，用户通过在App Store下载安装
-    - 企业分发：用于部署到服务器，用户通过扫描二维码或使用浏览器点击链接下载安装
+    - 内部测试(development)：用于给我们内部人员测试使用的，指定的授权用户设备才可以通过使用“同步助手”、“APP助手”等工具安装
+    - 商店分发(app-store)：用于提交到商店审核，用户设备只能通过在App Store下载安装
+    - 企业分发(enterprise)：用于部署到服务器，所有用户设备都可通过扫描二维码或使用浏览器点击链接下载安装
+    - 企业内部分发(ad-hoc)：用于部署到服务器，授权用户设备才可以通过扫描二维码或使用浏览器点击链接下载安装
 
 安装
 ==
