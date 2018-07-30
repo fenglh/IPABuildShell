@@ -3,7 +3,7 @@
 
 # ----------------------------------------------------------------------
 # name:         IPABuildShell.sh
-# version:      3.0.3(224)
+# version:      3.0.4(225)
 # createTime:   2018-07-30
 # description:  iOS 自动打包
 # author:       冯立海
