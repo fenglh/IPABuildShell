@@ -1,7 +1,7 @@
 ---
 layout: "post"
 title: "readme"
-date: "2018-07-25 10:27"
+date: "2018-07-30 17:42"
 ---
 IPABuildShell
 ==
@@ -14,7 +14,7 @@ fenglihaideMacBook-Pro: fenglihai$ /Users/itx/IPABuildShell/IPABuildShell.sh -h
 
 Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion YES/NO] ...
 可选项：
--a | --archs <armv7|arm64|armv7 arm64> 指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等
+-a | --archs <armv7|arm64|armv7 arm64> 指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等，默认"armv7 arm64"
 -b | --bundle-id bundleId 设置Bundle Id
 -c | --channel <development|app-store|enterprise|ad-hoc> 指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发
 -d | --provision-dir dir 指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
@@ -63,6 +63,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 - 支持workplace、cocoapod
 - 支持多工程协同项目使用`-t targetName` 指定构建target
 - 自动关闭BitCode，并可配置开关
+- 支持可选构建架构集合，默认构建"armv7 arm64"
 - 可配置自动修改内部版本号(Build Version)
 - 可配置修改接口生产环境和开发环境
 - 可配置指定新的Bundle Id
@@ -207,6 +208,11 @@ source ~/.bash_profile
 ### 版本更新日志
 
 ```
+# 2018/07/20
+# 版本：3.0.4
+# 1. 修复找不到plist文件的兼容问题
+# 2. 更改默认构建架构集为“armv7 arm64” 
+#--------------------------------------------
 # 2018/07/20
 # 版本：3.0.3
 # 1. 增加-t参数指定构建的Target
