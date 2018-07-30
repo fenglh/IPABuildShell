@@ -781,6 +781,8 @@ function getInfoPlistFile()
 		exit 1
 	fi
    local  infoPlistFileName=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:INFOPLIST_FILE" "$pbxproj" )
+   ## 替换$(SRCROOT)为.
+   infoPlistFileName=${infoPlistFileName//\$(SRCROOT)/.}
 	  ### 完整路径
 	infoPlistFilePath="$1/../$infoPlistFileName"
 	echo $infoPlistFilePath
@@ -1164,7 +1166,7 @@ function generalIPABuildShellVersion(){
 
 ## 默认配置
 CONFIGRATION_TYPE='Release'
-ARCHS='arm64'
+ARCHS='armv7 arm64'
 CHANNEL='development'
 ENABLE_BITCODE='NO'
 DEBUG_INFORMATION_FORMAT='dwarf'
