@@ -1364,34 +1364,28 @@ IFS="$OLD_IFS" ##还原
 targetName=''
 targetId=''
 xcodeprojPath=''
-if [[ ${#buildXcprojPathList[@]} -gt 1 ]]; then
-	if [[ "$BUILD_TARGET" ]]; then
-		for targetInfo in ${targetsInfoList[*]}; do
-			tId=$(getTargetInfoValue "$targetInfo" "id")
-			tName=$(getTargetInfoValue "$targetInfo" "name")
-			path=$(getTargetInfoValue "$targetInfo" "xcproj")
-			if [[ "$tName" == "$BUILD_TARGET" ]]; then
-				targetName="$tName"
-				targetId="$tId"
-				xcodeprojPath="$path"
-				break;
-			fi
+if [[ "$BUILD_TARGET" ]]; then
+	for targetInfo in ${targetsInfoList[*]}; do
+		tId=$(getTargetInfoValue "$targetInfo" "id")
+		tName=$(getTargetInfoValue "$targetInfo" "name")
+		path=$(getTargetInfoValue "$targetInfo" "xcproj")
+		if [[ "$tName" == "$BUILD_TARGET" ]]; then
+			targetName="$tName"
+			targetId="$tId"
+			xcodeprojPath="$path"
+			break;
+		fi
 
-		done
-	else
-		errorExit "当前项目为${#buildXcprojPathList[*]}个工程协同，并有多个可构建的Target, 请使用\"-t target\" 来指定要构建的target"
-	fi
-
-elif [[ ${#buildXcprojPathList[@]} -eq 1 ]]; then
-	## 默认选择第一个target
+	done
+else
+		## 默认选择第一个target
 	targetInfo=${targetsInfoList[0]}
 	targetId=$(getTargetInfoValue "$targetInfo" "id")
 	targetName=$(getTargetInfoValue "$targetInfo" "name")
 	xcodeprojPath=$(getTargetInfoValue "$targetInfo" "xcproj")
-	
-else
-	errorExit "无法找到项目工程文件"
 fi
+
+
 
 logit "【构建信息】构建Target：${targetName}（${targetId}）"
 
