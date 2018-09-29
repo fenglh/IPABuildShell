@@ -930,6 +930,13 @@ function getProfileInfo(){
 			logit "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
 			logit "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
 			logit "【授权文件】使用的证书有效天数：$provisionCodesignExpirationDays "
+
+			if [[ $provisionFileExpirationDays -lt 0 ]]; then
+				errorExit "授权文件:${provisionFileName} 已过期，请更新授权文件!"
+			fi
+			if [[ $provisionCodesignExpirationDays -lt 0 ]]; then
+				errorExit "证书:${provisionfileCodeSign} 已过期，请更新证书!"
+			fi
 }
 
 
