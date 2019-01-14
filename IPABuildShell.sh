@@ -1219,6 +1219,11 @@ while [ "$1" != "" ]; do
             shift
             ARCHS="$1"
             ;;
+        -g| --git-versions )
+			gitRepositoryVersionNumbers=$(getGitRepositoryVersionNumbers)
+			logit "$gitRepositoryVersionNumbers"
+			exit;
+			;;
         -p| --keychain-password )
             shift
             UNLOCK_KEYCHAIN_PWD="$1"
