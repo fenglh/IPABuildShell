@@ -58,7 +58,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
   ```
 
 - 允许指定授权文件目录,脚本将只在该目录匹配授权文件
-- 支持Xcode `8.0`至`10`
+- 支持Xcode `8.0` 及以上
 - 支持ipa签名方式：development、app-store、enterprise，ad-hoc，即内部分发、商店分发、企业分发、企业内部分发
 - 支持workplace、cocoapod
 - 支持多工程协同项目使用`-t targetName` 指定构建target
