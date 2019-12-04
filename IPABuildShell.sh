@@ -47,6 +47,7 @@ function usage
   	echo "  -b | --bundle-id <bundleId> 设置Bundle Id"
   	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发"
 	echo "  -d | --provision-dir <dir> 指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
+	echo "  -g | --git-versions 查看当前git版本数量"
 	echo "  -p | --keychain-password <passoword> 指定访问证书时解锁钥匙串的密码，即开机密码"
 	echo "  -t | --target <targetName> 指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target"
 	echo "  -v | --verbose 输出详细的构建信息"
@@ -54,6 +55,7 @@ function usage
 	echo "  -x 脚本执行调试模式."
 
 	
+
 	echo "  --show-profile-detail <provisionfile> 查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)"
 	echo "  --debug Debug和Release构建模式，默认Release模式，"
 	echo "  --enable-bitcode 开启BitCode, 默认不开启"
@@ -599,7 +601,7 @@ function getProvisionCodeSignIdentity
 {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
-	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile"  | grep Subject | grep "CN=" | cut -d "," -f2 | cut -d "=" -f2)
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "CN=" | awk -F ", OU" '{print $1}' | cut -d "=" -f3)
 	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	## 这里使用-e 来解决中文签名id的问题
 	echo -e "${codeSignIdentity}"
