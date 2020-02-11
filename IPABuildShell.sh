@@ -46,7 +46,7 @@ function usage
 	echo "  -a | --archs <armv7|arm64|armv7 arm64> 指定构建架构集，例如：-a 'armv7'或者 -a 'arm64' 或者 -a 'armv7 arm64' 等"
   	echo "  -b | --bundle-id <bundleId> 设置Bundle Id"
   	echo "  -c | --channel <development|app-store|enterprise|ad-hoc> 指定分发渠道，development 内部分发，app-store商店分发，enterprise企业分发， ad-hoc 企业内部分发"
-	echo "  -d | --provision-dir <dir> 指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
+	echo "  -d | --provision-dir <dir> 指定描述文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找"
 	echo "  -g | --git-versions 查看当前git版本数量"
 	echo "  -p | --keychain-password <passoword> 指定访问证书时解锁钥匙串的密码，即开机密码"
 	echo "  -t | --target <targetName> 指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target"
@@ -56,7 +56,7 @@ function usage
 
 	
 
-	echo "  --show-profile-detail <provisionfile> 查看授权文件的信息详情(development、enterprise、app-store、ad-hoc)"
+	echo "  --show-profile-detail <provisionfile> 查看描述文件的信息详情(development、enterprise、app-store、ad-hoc)"
 	echo "  --debug Debug和Release构建模式，默认Release模式，"
 	echo "  --enable-bitcode 开启BitCode, 默认不开启"
 	echo "  --auto-buildversion 自动修改构建版本号（设置为当前项目的git版本数量），默认不开启"
@@ -562,7 +562,7 @@ function setIPAEnvFile () {
 
 
 
-##获取授权文件过期天数
+##获取描述文件过期天数
 function getExpiretionDays()
 {
 
@@ -573,7 +573,7 @@ function getExpiretionDays()
     echo $days
 }
 
-## 将授权文件的签名数据封装成证书
+## 将描述文件的签名数据封装成证书
 function wrapProvisionSignDataToCer {
 
 	local provisionFile=$1
@@ -596,7 +596,7 @@ function wrapProvisionSignDataToCer {
 	echo "${tmpCerFile}"
 }
 
-## 获取授权文件中的签名id
+## 获取描述文件中的签名id
 function getProvisionCodeSignIdentity
 {
 	local provisionFile=$1
@@ -611,7 +611,7 @@ function getProvisionfileCreateTimestmap {
 	local provisionFile=$1
 	##切换到英文环境，不然无法转换成时间戳
     export LANG="en_US.UTF-8"
-    ##获取授权文件的过期时间
+    ##获取描述文件的过期时间
     local createTime=`$CMD_PlistBuddy -c 'Print :CreationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/tmp/log.txt)`
     local timestamp=`date -j -f "%a %b %d  %T %Z %Y" "$createTime" "+%s"`
     # echo $(date -r `expr $timestamp `  "+%Y年%m月%d" )
@@ -622,14 +622,14 @@ function getProvisionfileExpireTimestmap {
 	local provisionFile=$1
 	    ##切换到英文环境，不然无法转换成时间戳
     export LANG="en_US.UTF-8"
-    ##获取授权文件的过期时间
+    ##获取描述文件的过期时间
     local expirationTime=`$CMD_PlistBuddy -c 'Print :ExpirationDate' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/tmp/log.txt)`
     local timestamp=`date -j -f "%a %b %d  %T %Z %Y" "$expirationTime" "+%s"`
     # echo $(date -r `expr $timestamp `  "+%Y年%m月%d" )
     echo "$timestamp"
 }
 
-## 获取授权文件中指定证书的创建时间
+## 获取描述文件中指定证书的创建时间
 function getProvisionCodeSignCreateTimestamp {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
@@ -648,7 +648,7 @@ function getProvisionCodeSignCreateTimestamp {
 }
 
 
-## 获取授权文件中指定证书的过期时间
+## 获取描述文件中指定证书的过期时间
 function getProvisionCodeSignExpireTimestamp {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
@@ -681,7 +681,7 @@ function getProvisionCodeSignSerial {
 }
 
 
-## 获取授权文件UUID
+## 获取描述文件UUID
 function getProvisionfileUUID()
 {
 	local provisionFile=$1
@@ -691,7 +691,7 @@ function getProvisionfileUUID()
 	provisonfileUUID=$($CMD_PlistBuddy -c 'Print :UUID' /dev/stdin <<< $($CMD_Security cms -D -i "$provisionFile" 2>/dev/null))
 	echo $provisonfileUUID
 }
-## 获取授权文件TeamName
+## 获取描述文件TeamName
 function getProvisionfileTeamName()
 {
 	local provisionFile=$1
@@ -703,7 +703,7 @@ function getProvisionfileTeamName()
 }
 
 
-## 获取授权文件TeamID
+## 获取描述文件TeamID
 function getProvisionfileTeamID()
 {
 	local provisionFile=$1
@@ -714,7 +714,7 @@ function getProvisionfileTeamID()
 	echo $provisonfileTeamID
 }
 
-## 获取授权文件名称
+## 获取描述文件名称
 function getProvisionfileName()
 {
 	local provisionFile=$1
@@ -838,14 +838,14 @@ function checkCodeSignIdentityValid()
 # 	echo "$codeSignIdentity"
 # }
 
-##匹配授权文件
+##匹配描述文件
 function matchMobileProvisionFile()
 {	
 
 	##分发渠道
 	local channel=$1
 	local appBundleId=$2
-	##授权文件目录
+	##描述文件目录
 	local mobileProvisionFileDir=$3
 	if [[ ! -d "$mobileProvisionFileDir" ]]; then
 		exit 1
@@ -860,7 +860,7 @@ function matchMobileProvisionFile()
 			local profileType=$(getProfileType "$file")
 			if [[ "$profileType" == "$channel" ]]; then
 				local timestmap=$(getProvisionfileExpireTimestmap "$file")
-				## 匹配到有效天数最大的授权文件
+				## 匹配到有效天数最大的描述文件
 				if [[ $timestmap -gt $maxExpireTimestmap ]]; then
 					provisionFile=$file
 					maxExpireTimestmap=$timestmap
@@ -888,7 +888,7 @@ function getProfileBundleId()
 function getProfileInfo(){
 
 			if [[ ! -f "$1" ]]; then
-				errorExit "指定授权文件不存在!"
+				errorExit "指定描述文件不存在!"
 			fi
 
 			
@@ -918,23 +918,23 @@ function getProfileInfo(){
 			provisionCodesignExpirationDays=$(getExpiretionDays "$provisionCodeSignExpireTimestamp")
 			
 
-			logit "【授权文件】名字：$provisionFileName "
-			logit "【授权文件】类型：${provisionFileType}（${channelName}）"
-			logit "【授权文件】TeamID：$provisionFileTeamID "
-			logit "【授权文件】Team Name：$provisionfileTeamName "
-			logit "【授权文件】BundleID：$provisionFileBundleID "
-			logit "【授权文件】UUID：$provisionFileUUID "
-			logit "【授权文件】创建时间：$provisionfileCreateTime "
-			logit "【授权文件】过期时间：$provisionfileExpireTime "
-			logit "【授权文件】有效天数：$provisionFileExpirationDays "
-			logit "【授权文件】使用的证书签名ID：$provisionfileCodeSign "
-			logit "【授权文件】使用的证书序列号：$provisionfileCodeSignSerial"
-			logit "【授权文件】使用的证书创建时间：$provisionCodeSignCreateTime"
-			logit "【授权文件】使用的证书过期时间：$provisionCodeSignExpireTime"
-			logit "【授权文件】使用的证书有效天数：$provisionCodesignExpirationDays "
+			logit "【描述文件】名字：$provisionFileName "
+			logit "【描述文件】类型：${provisionFileType}（${channelName}）"
+			logit "【描述文件】TeamID：$provisionFileTeamID "
+			logit "【描述文件】Team Name：$provisionfileTeamName "
+			logit "【描述文件】BundleID：$provisionFileBundleID "
+			logit "【描述文件】UUID：$provisionFileUUID "
+			logit "【描述文件】创建时间：$provisionfileCreateTime "
+			logit "【描述文件】过期时间：$provisionfileExpireTime "
+			logit "【描述文件】有效天数：$provisionFileExpirationDays "
+			logit "【描述文件】使用的证书签名ID：$provisionfileCodeSign "
+			logit "【描述文件】使用的证书序列号：$provisionfileCodeSignSerial"
+			logit "【描述文件】使用的证书创建时间：$provisionCodeSignCreateTime"
+			logit "【描述文件】使用的证书过期时间：$provisionCodeSignExpireTime"
+			logit "【描述文件】使用的证书有效天数：$provisionCodesignExpirationDays "
 
 			if [[ $provisionFileExpirationDays -lt 0 ]]; then
-				errorExit "授权文件:${provisionFileName} 已过期，请更新授权文件!"
+				errorExit "描述文件:${provisionFileName} 已过期，请更新描述文件!"
 			fi
 			if [[ $provisionCodesignExpirationDays -lt 0 ]]; then
 				errorExit "证书:${provisionfileCodeSign} 已过期，请更新证书!"
@@ -942,7 +942,7 @@ function getProfileInfo(){
 }
 
 
-##获取授权文件类型
+##获取描述文件类型
 function getProfileType()
 {
 	local profile=$1
@@ -1480,24 +1480,24 @@ setManulCodeSigningRuby "$xcodeprojPath" "$targetId"
 ##检查openssl
 checkOpenssl
 
-logit "【构建信息】进行授权文件匹配..."
-## 匹配授权文件
+logit "【构建信息】进行描述文件匹配..."
+## 匹配描述文件
 provisionFile=$(matchMobileProvisionFile "$CHANNEL" "$projectBundleId" "$PROVISION_DIR")
 if [[ ! "$provisionFile" ]]; then
-	errorExit "不存在Bundle Id 为 ${projectBundleId} 且分发渠道为${CHANNEL}的授权文件，请检查${PROVISION_DIR}目录是否存在对应授权文件"
+	errorExit "不存在Bundle Id 为 ${projectBundleId} 且分发渠道为${CHANNEL}的描述文件，请检查${PROVISION_DIR}目录是否存在对应描述文件"
 fi
-##导入授权文件
+##导入描述文件
 open "$provisionFile"
 
 
-logit "【构建信息】匹配授权文件：$provisionFile"
-## 展示授权文件信息
+logit "【构建信息】匹配描述文件：$provisionFile"
+## 展示描述文件信息
 getProfileInfo "$provisionFile"
 
 ## 获取签名
 codeSignIdentity=$(getProvisionCodeSignIdentity "$provisionFile")
 if [[ ! "$codeSignIdentity" ]]; then
-	errorExit "获取授权文件签名失败! 授权文件:${provisionFile}"
+	errorExit "获取描述文件签名失败! 描述文件:${provisionFile}"
 fi
 logit "【签名信息】匹配签名ID：$codeSignIdentity"
 result=$(checkCodeSignIdentityValid "$codeSignIdentity")
