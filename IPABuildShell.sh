@@ -1521,6 +1521,10 @@ setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provision
 setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
 setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
 setXCconfigWithKeyValue "ARCHS" "$ARCHS"
+setXCconfigWithKeyValue "SUPPORTS_MACCATALYST" "NO"
+
+
+
 
 
 
