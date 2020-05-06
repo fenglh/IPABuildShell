@@ -602,7 +602,8 @@ function getProvisionCodeSignIdentity
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
-	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "UID" | awk -F ", OU" '{print $1}' | cut -d "=" -f3)
+##去掉前后空格
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "UID" | awk -F ", OU" '{print $1}' | cut -d "=" -f3 |  awk '{sub(/^ */, "");sub(/ *$/, "")}1' )
 	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	## 这里使用-e 来解决中文签名id的问题
 	echo -e "${codeSignIdentity}"
@@ -928,7 +929,7 @@ function getProfileInfo(){
 			logit "【描述文件】创建时间：$provisionfileCreateTime "
 			logit "【描述文件】过期时间：$provisionfileExpireTime "
 			logit "【描述文件】有效天数：$provisionFileExpirationDays "
-			logit "【描述文件】使用的证书签名ID：$provisionfileCodeSign "
+			logit "【描述文件】使用的证书签名ID：[${provisionfileCodeSign}]"
 			logit "【描述文件】使用的证书序列号：$provisionfileCodeSignSerial"
 			logit "【描述文件】使用的证书创建时间：$provisionCodeSignCreateTime"
 			logit "【描述文件】使用的证书过期时间：$provisionCodeSignExpireTime"
@@ -1500,7 +1501,7 @@ codeSignIdentity=$(getProvisionCodeSignIdentity "$provisionFile")
 if [[ ! "$codeSignIdentity" ]]; then
 	errorExit "获取描述文件签名失败! 描述文件:${provisionFile}"
 fi
-logit "【签名信息】匹配签名ID：$codeSignIdentity"
+logit "【签名信息】匹配签名ID：【$codeSignIdentity"】
 result=$(checkCodeSignIdentityValid "$codeSignIdentity")
 if [[ ! "$result" ]]; then
 	errorExit "签名ID:${codeSignIdentity}无效，请检查钥匙串是否导入对应的证书或脚本访问keychain权限不足，请使用-p参数指定密码 "
