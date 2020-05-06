@@ -601,7 +601,8 @@ function getProvisionCodeSignIdentity
 {
 	local provisionFile=$1
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
-	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "CN=" | awk -F ", OU" '{print $1}' | cut -d "=" -f3)
+
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "UID" | awk -F ", OU" '{print $1}' | cut -d "=" -f3)
 	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	## 这里使用-e 来解决中文签名id的问题
 	echo -e "${codeSignIdentity}"
