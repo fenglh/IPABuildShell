@@ -374,21 +374,34 @@ function  checkPodfileExist() {
 
 function getProjectVersion() {
 	local infoPlistFile=$1
+	local configurationId=$2
+	local pbxproj=$3/project.pbxproj
+
+
 	if [[ ! -f "$infoPlistFile" ]]; then
 		exit 1
 	fi
 	local projectVersion=$($CMD_PlistBuddy -c "Print :CFBundleShortVersionString"  "$infoPlistFile")
+	## 兼容xcode 11 版本号显式显式在info.plist 而是用$(MARKETING_VERSION)
+
+	
+	if [[ "projectVersion"=='$(MARKETING_VERSION)' ]]; then
+
+		projectVersion=$($CMD_PlistBuddy -c "Print :objects:$configurationId:buildSettings:MARKETING_VERSION" "$pbxproj" )
+	fi
 
 	echo $projectVersion
 }
+
+
 function getBuildVersion() {
 	local infoPlistFile=$1
 	if [[ ! -f "$infoPlistFile" ]]; then
 		exit 1
 	fi
-	local projectVersion=$($CMD_PlistBuddy -c "Print :CFBundleVersion"  "$infoPlistFile")
+	local buildVersion=$($CMD_PlistBuddy -c "Print :CFBundleVersion"  "$infoPlistFile")
 
-	echo $projectVersion
+	echo $buildVersion
 }
 
 ## 获取git仓库版本数量
@@ -425,6 +438,8 @@ function finalIPAName ()
 	local apiEnvVarName=$3
 	local infoPlistFile=$4
 	local channelName=$5
+	local configurationId=$6
+	local xcodeprojPath=$7
 
 	if [[ ! -f "$infoPlistFile" ]]; then
 		return;
@@ -433,7 +448,7 @@ function finalIPAName ()
 	local curDatte=`date +"%Y%m%d_%H%M%S"`
 	local ipaName=${targetName}_${curDatte}
 	local apiEnvValue=$(getIPAEnvValue "$apiEnvFile" "$apiEnvVarName")
-	local projectVersion=$(getProjectVersion "$infoPlistFile")
+	local projectVersion=$(getProjectVersion "$infoPlistFile" "$configurationId" "$xcodeprojPath")
 	local buildVersion=$(getBuildVersion "$infoPlistFile")
 
 
@@ -1118,6 +1133,10 @@ function checkIPA()
 	unzip -o "$exportPath" -d ${Package_Dir} >/dev/null 2>&1
 	
 	local app=${Package_Dir}/Payload/"${ipaName}".app
+
+	if [[ ! -d "$app" ]]; then
+		app=$(find "${Package_Dir}/Payload" -name "*.app" | head -1)
+	fi
 	codesign --no-strict -v "$app"
 	if [[ $? -ne 0 ]]; then
 		errorExit "签名检查：签名校验不通过！"
@@ -1591,7 +1610,7 @@ logit "【IPA 信息】IPA和日志重命名"
 exportDir=${exportPath%/*} 
 
 
-ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$(getProfileTypeCNName $CHANNEL)")
+ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$(getProfileTypeCNName $CHANNEL)" "$configurationId" "$xcodeprojPath" )
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
 logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
 
