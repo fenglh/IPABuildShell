@@ -618,7 +618,7 @@ function getProvisionCodeSignIdentity
 	local cerFile=$(wrapProvisionSignDataToCer "$provisionFile")
 
 ##去掉前后空格
-	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "UID" | awk -F ", OU" '{print $1}' | cut -d "=" -f3 |  awk '{sub(/^ */, "");sub(/ *$/, "")}1' )
+	local codeSignIdentity=$(openssl x509 -noout -text -in "$cerFile" | grep Subject | grep "UID" | awk -F ", OU" '{print $1}' | cut -d "=" -f3 |  awk '{sub(/^ */, "");sub(/ *$/, "")}1' |sed 's/\"//g' )
 	##必须使用"${}"这种形式，否则连续的空格会被转换成一个空格
 	## 这里使用-e 来解决中文签名id的问题
 	echo -e "${codeSignIdentity}"
@@ -873,7 +873,21 @@ function matchMobileProvisionFile()
 
 	for file in "${mobileProvisionFileDir}"/*.mobileprovision; do
 		local bundleIdFromProvisionFile=$(getProfileBundleId "$file")
-		if [[ "$bundleIdFromProvisionFile" ]] && [[ "$appBundleId" == "$bundleIdFromProvisionFile" ]]; then
+		local wildcard=${bundleIdFromProvisionFile:0-2} ##从右边取2个字符串
+
+		local isWildcardBundleId=false
+		if [[ "$wildcard" == '.*' ]]; then
+			isWildcardBundleId=true
+			# echo "$bundleIdFromProvisionFile 是通配符bundle id"
+		fi
+
+
+		local orginPrefix=$(echo ${bundleIdFromProvisionFile%.*})
+		local targetPrefix=$(echo "${appBundleId%.*}")
+
+
+		if [[ "$appBundleId" == "$bundleIdFromProvisionFile" ]] || [[ "$orginPrefix" == "$targetPrefix" ]]  ; then
+
 			local profileType=$(getProfileType "$file")
 			if [[ "$profileType" == "$channel" ]]; then
 				local timestmap=$(getProvisionfileExpireTimestmap "$file")
