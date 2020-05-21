@@ -215,6 +215,7 @@ function getXcodeVersion() {
 ##xcode 8.3之后使用-exportFormat导出IPA会报错 xcodebuild: error: invalid option '-exportFormat',改成使用-exportOptionsPlist
 function generateOptionsPlist(){
 	local provisionFile=$1
+	local bundleId=$2
 	if [[ ! -f "$provisionFile" ]]; then
 		exit 1
 	fi
@@ -222,7 +223,7 @@ function generateOptionsPlist(){
 	local provisionFileTeamID=$(getProvisionfileTeamID "$provisionFile")
 	local provisionFileType=$(getProfileType "$provisionFile")
 	local provisionFileName=$(getProvisionfileName "$provisionFile")
-	local provisionFileBundleID=$(getProfileBundleId "$provisionFile")
+	# local provisionFileBundleID=$(getProfileBundleId "$provisionFile")
 	local compileBitcode='<false/>'
 	if [[ "$ENABLE_BITCODE" == 'YES' ]]; then
 		compileBitcode='<true/>'
@@ -242,7 +243,7 @@ function generateOptionsPlist(){
     <true/>\n
 	<key>provisioningProfiles</key>\n
     <dict>\n
-        <key>$provisionFileBundleID</key>\n
+        <key>$bundleId</key>\n
         <string>$provisionFileName</string>\n
     </dict>\n
 	<key>compileBitcode</key>\n
@@ -1068,6 +1069,7 @@ function exportIPA() {
 
 	local archivePath=$1
 	local provisionFile=$2
+	local bundleId=$3
 	local targetName=${archivePath%.*}
 	targetName=${targetName##*/}
 	local xcodeVersion=$(getXcodeVersion)
@@ -1081,7 +1083,7 @@ function exportIPA() {
 	local cmd="$CMD_Xcodebuild -exportArchive"
 	## >= 8.3
 	if versionCompareGE "$xcodeVersion" "8.3"; then
-		local optionsPlistFile=$(generateOptionsPlist "$provisionFile")
+		local optionsPlistFile=$(generateOptionsPlist "$provisionFile" "$bundleId")
 		 cmd="$cmd"" -archivePath \"$archivePath\" -exportPath \"$Package_Dir\" -exportOptionsPlist \"$optionsPlistFile\""
 	else
 		cmd="$cmd"" -exportFormat IPA -archivePath \"$archivePath\" -exportPath \"$exportPath\""
@@ -1589,7 +1591,7 @@ logit "【归档信息】项目构建成功，文件路径：$archivePath"
 
 # 开始导出IPA
 exportPath=''
-exportIPA  "$archivePath" "$provisionFile"
+exportIPA  "$archivePath" "$provisionFile" "$projectBundleId"
 if [[ ! "$exportPath" ]]; then
 	errorExit "IPA导出失败，请检查日志。"
 fi
