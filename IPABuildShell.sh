@@ -55,7 +55,7 @@ function usage
 	echo "  -x 脚本执行调试模式."
 
 	
-
+	echo "	--non-dsym 不生成dsym文件"
 	echo "  --show-profile-detail <provisionfile> 查看描述文件的信息详情(development、enterprise、app-store、ad-hoc)"
 	echo "  --debug Debug和Release构建模式，默认Release模式，"
 	echo "  --enable-bitcode 开启BitCode, 默认不开启"
@@ -1213,7 +1213,7 @@ CONFIGRATION_TYPE='Release'
 ARCHS='armv7 arm64'
 CHANNEL='development'
 ENABLE_BITCODE='NO'
-DEBUG_INFORMATION_FORMAT='dwarf'
+DEBUG_INFORMATION_FORMAT='dwarf-with-dsym' ##默认生成dsym文件
 AUTO_BUILD_VERSION='NO'
 UNLOCK_KEYCHAIN_PWD=''
 CODE_SIGN_STYLE='Manual'
@@ -1278,6 +1278,13 @@ while [ "$1" != "" ]; do
 			shift
 			CONFIGRATION_TYPE="Debug"
 			;;
+		--non-dsym )
+			shift 
+			# DEBUG_INFORMATION_FORMAT="dwarf-with-dsym"
+			DEBUG_INFORMATION_FORMAT="dwarf"
+			
+			;;
+
         --show-profile-detail )
 			shift
 			getProfileInfo "$1"
@@ -1561,6 +1568,7 @@ setXCconfigWithKeyValue "SUPPORTS_MACCATALYST" "NO"
 
 
 
+
 unlockKeychain
 if [[ $? -eq 0 ]]; then
 	logit "【钥匙串 】unlock-keychain";
@@ -1603,14 +1611,24 @@ if [[ "$xcentFile" ]]; then
 	logit "【xcent 文件修复】拷贝archived-expanded-entitlements.xcent 到${xcentFile}"
 fi
 
+##备份dsym文件
+
+dsym=$(find "${archivePath}/dSYMs" -name "*.dSYM" | head -1)
+if [[ -d "$dsym" ]]; then
+	cd "$Package_Dir"
+	tar -czvf  "dsym.tar.gz" "$dsym"
+fi
+
+
+
 ## 检查IPA
 checkIPA "$exportPath"
 
 ##清理临时文件
-rm -rf "$Tmp_Options_Plist_File"
-rm -rf "$Tmp_Build_Xcconfig_File"
-rm -rf "$archivePath"
-rm -rf "$Package_Dir/Packaging.log"
+rm -rf "$Tmp_Options_Plist_File" ##清理option.plist
+rm -rf "$Tmp_Build_Xcconfig_File" ##清理xcconfig
+rm -rf "$archivePath"	##清理xcarchive
+rm -rf "$Package_Dir/Packaging.log" #清理日志
 rm -rf "$Package_Dir/ExportOptions.plist"
 rm -rf "$Package_Dir/DistributionSummary.plist"
 
@@ -1623,16 +1641,23 @@ exportDir=${exportPath%/*}
 
 
 ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$(getProfileTypeCNName $CHANNEL)" "$configurationId" "$xcodeprojPath" )
+
+
+mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
+mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
+if [[ -f "$Package_Dir/dsym.tar.gz" ]]; then
+	mv "$Package_Dir/dsym.tar.gz"  "${exportDir}/${ipaName}.tar.gz"
+	logit "【IPA 信息】DYSM路径:${exportDir}/${ipaName}.tar.gz"
+fi
+
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
 logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
-
 
 
 ##结束时间
 endTimeSeconds=`date +%s`
 logit "【构建时长】构建时长：$((${endTimeSeconds}-${startTimeSeconds})) 秒"
 
-mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
-mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
+
 
 
