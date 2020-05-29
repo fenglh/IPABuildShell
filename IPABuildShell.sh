@@ -1615,8 +1615,8 @@ fi
 
 dsym=$(find "${archivePath}/dSYMs" -name "*.dSYM" | head -1)
 if [[ -d "$dsym" ]]; then
-	cd "$Package_Dir"
-	tar -czvf  "dsym.tar.gz" "$dsym"
+	cd "${archivePath}/dSYMs"
+	tar -czvf  "$Package_Dir/dsym.tar.gz"  "${dsym##*/}"  2>/dev/null
 fi
 
 
@@ -1627,7 +1627,7 @@ checkIPA "$exportPath"
 ##清理临时文件
 rm -rf "$Tmp_Options_Plist_File" ##清理option.plist
 rm -rf "$Tmp_Build_Xcconfig_File" ##清理xcconfig
-rm -rf "$archivePath"	##清理xcarchive
+# rm -rf "$archivePath"	##清理xcarchive
 rm -rf "$Package_Dir/Packaging.log" #清理日志
 rm -rf "$Package_Dir/ExportOptions.plist"
 rm -rf "$Package_Dir/DistributionSummary.plist"
@@ -1646,8 +1646,8 @@ ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlis
 mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
 mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
 if [[ -f "$Package_Dir/dsym.tar.gz" ]]; then
-	mv "$Package_Dir/dsym.tar.gz"  "${exportDir}/${ipaName}.tar.gz"
-	logit "【IPA 信息】DYSM路径:${exportDir}/${ipaName}.tar.gz"
+	mv "$Package_Dir/dsym.tar.gz"  "${exportDir}/${ipaName}.dysm.tar.gz"
+	logit "【IPA 信息】DYSM路径:${exportDir}/${ipaName}.dysm.tar.gz"
 fi
 
 logit "【IPA 信息】IPA路径:${exportDir}/${ipaName}.ipa"
