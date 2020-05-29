@@ -876,19 +876,16 @@ function matchMobileProvisionFile()
 		local bundleIdFromProvisionFile=$(getProfileBundleId "$file")
 		local wildcard=${bundleIdFromProvisionFile:0-2} ##从右边取2个字符串
 
-		local isWildcardBundleId=false
-		if [[ "$wildcard" == '.*' ]]; then
-			isWildcardBundleId=true
-			# echo "$bundleIdFromProvisionFile 是通配符bundle id"
-		fi
+
 
 
 		local orginPrefix=$(echo ${bundleIdFromProvisionFile%.*})
 		local targetPrefix=$(echo "${appBundleId%.*}")
 
 
-		if [[ "$appBundleId" == "$bundleIdFromProvisionFile" ]] || [[ "$orginPrefix" == "$targetPrefix" ]]  ; then
+		if [[ "$appBundleId" == "$bundleIdFromProvisionFile"  || (( "$wildcard" == '.*' &&  "$orginPrefix" == "$targetPrefix" )) ]]  ; then
 
+			# echo "$bundleIdFromProvisionFile ： $appBundleId ，$orginPrefix : $targetPrefix "
 			local profileType=$(getProfileType "$file")
 			if [[ "$profileType" == "$channel" ]]; then
 				local timestmap=$(getProvisionfileExpireTimestmap "$file")
@@ -1342,7 +1339,6 @@ logit "【构建信息】Xcode版本：$xcVersion"
 
 ## 获取xcproj 工程列表
 xcworkspace=$(findXcworkspace)
-
 
 
 
