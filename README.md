@@ -122,40 +122,21 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 ![](http://ozhqm0ga1.bkt.clouddn.com/22.png)
 
 
-user.xcconfig 文件说明
+xcconfig 文件说明
 ==
+--xconfig 参数的用法和`xcodebuild --xcconfig ~/build.xcconfig` 的使用是一致的。而xcconfig 文件中的键值对，可以再target-Build Setting 中拷贝过来。
 
-如果你觉得执行脚本时，经常要指定一些些固定的参数，那么你的可以在`user.xcconfig`配置这些参数：
 ```c++
+ENABLE_BITCODE = NO
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+CODE_SIGN_STYLE = Manual
+PROVISIONING_PROFILE_SPECIFIER = dev_cn.com.bluemoon.sfa-20200423
+PROVISIONING_PROFILE = 72571deb-21a1-4976-bb3f-51674cec44d7
+DEVELOPMENT_TEAM = NK94TM64KF
+CODE_SIGN_IDENTITY = iPhone Developer: Li Chao (BTTHBUB23E)
+PRODUCT_BUNDLE_IDENTIFIER = cn.com.bluemoon.sfa
+SUPPORTS_MACCATALYST = NO
 
-//脚本全局参数配置文件(脚本参数优先于全局配置参数)
-
-
-//keychain解锁密码，即PC开机密码。通常只有在第一次执行脚本时候需要。相当于脚本参数 -p | --keychain-password
-UNLOCK_KEYCHAIN_PWD =
-
-//构建模式：Debug/Release ；默认 Release。相当于脚本参数 -t | --configration-type
-CONFIGRATION_TYPE=
-
-//架构集 ：arm64/armv7/armv7 arm64 ；默认 arm64。相当于脚本参数 -a | --archs
-ARCHS =
-
-//是否启动bitcode ：YES/NO 关闭； 默认 NO。相当于脚本参数 --enable-bitcode
-ENABLE_BITCODE =
-
-//是否自动修改build version：YES/NO ；默认 NO （取当前项目git的版本数量作为build version ）。相当于脚本参数 --auto-buildversion
-AUTO_BUILD_VERSION =
-
-//授权文件目录，默认在~/Library/MobileDevice/Provisioning Profiles。相当于脚本参数 -d | --provision-dir
-PROVISION_DIR=
-
-//例如在AppDelegate.h 声明变量 static BOOL isProduction = NO;来控制接口的生产环境和开发环境
-//指定配置接口生产环境的文件名。相当于脚本参数 --env-filename
-API_ENV_FILE_NAME =
-//指定配置接口生产环境的变量名。相当于脚本参数 --env-varname
-API_ENV_VARNAME =
-//指定配置接口生产环境的变量值：YES/NO 相当于脚本参数 --env-production
-API_ENV_PRODUCTION =
 
 
 
