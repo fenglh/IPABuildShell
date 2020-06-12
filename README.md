@@ -124,7 +124,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 
 xcconfig 文件说明
 ==
---xconfig 参数的用法和`xcodebuild --xcconfig ~/build.xcconfig` 的使用是一致的。而xcconfig 文件中的键值对，可以再target-Build Setting 中拷贝过来。
+--xconfig 参数的用法和`xcodebuild --xcconfig ~/build.xcconfig` 的使用是一致的。而xcconfig 文件中的键值对，可以在`Xcode`-`target`-`Build Settings` 中对其中你感兴趣的一项配置进行拷贝，即可获得该配置的键值对。例如：
 
 ```c++
 ENABLE_BITCODE = NO
