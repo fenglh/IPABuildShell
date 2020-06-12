@@ -60,7 +60,7 @@ function usage
 	echo "  --debug Debug和Release构建模式，默认Release模式，"
 	echo "  --enable-bitcode 开启BitCode, 默认不开启"
 	echo "  --auto-buildversion 自动修改构建版本号（设置为当前项目的git版本数量），默认不开启"
-	echo "  --xcconfig <filename> 构建的时候，会去加载在该文件中定义的Build Setting 的配置。注：如果出现与其他参数配置相同的功能，这里的配置会覆盖其他所有设置。它与xcodebuild 命令的\" -xcconfig <filename> \" 参数用法一致"
+	echo "  --xcconfig <filename> 构建的时候，会去加载在该文件中定义的Build Setting 的配置。注：如果出现与其他参数配置相同的功能，这里的配置会覆盖其他所有设置。它与xcodebuild 命令的\" -xcconfig <filename> \" 参数用法一致。文件格式为:key=value"
 	echo "  --env-filename <filename> 指定开发和生产环境的配置文件"
 	echo "  --env-varname <varname> 指定开发和生产环境的配置变量"
 	echo "  --env-production <YES/NO> YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）"
