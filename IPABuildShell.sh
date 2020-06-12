@@ -27,7 +27,7 @@ Shell_Work_Path=$(pwd)
 ##脚本文件目录
 Shell_File_Path=$(cd `dirname $0`; pwd)
 ## 用户配置
-Shell_User_Xcconfig_File="$Shell_File_Path/user.xcconfig"
+# Shell_User_Xcconfig_File="$Shell_File_Path/user.xcconfig"
 ## 脚本临时生成最终用于构建的配置
 Tmp_Build_Xcconfig_File="$Package_Dir/build.xcconfig"
 Tmp_Log_File="$Package_Dir/`date +"%Y%m%d%H%M%S"`.txt"
@@ -55,15 +55,22 @@ function usage
 	echo "  -x 脚本执行调试模式."
 
 	
-	echo "	--non-dsym 不生成dsym文件"
+	echo "  --non-dsym 不生成dsym文件"
 	echo "  --show-profile-detail <provisionfile> 查看描述文件的信息详情(development、enterprise、app-store、ad-hoc)"
 	echo "  --debug Debug和Release构建模式，默认Release模式，"
 	echo "  --enable-bitcode 开启BitCode, 默认不开启"
 	echo "  --auto-buildversion 自动修改构建版本号（设置为当前项目的git版本数量），默认不开启"
+	echo "  --xcconfig <filename> 构建的时候，会去加载在该文件中定义的Build Setting 的配置。注：如果出现与其他参数配置相同的功能，这里的配置会覆盖其他所有设置。它与xcodebuild 命令的\" -xcconfig <filename> \" 参数用法一致"
 	echo "  --env-filename <filename> 指定开发和生产环境的配置文件"
 	echo "  --env-varname <varname> 指定开发和生产环境的配置变量"
 	echo "  --env-production <YES/NO> YES 生产环境， NO 开发环境（只有指定filename和varname都存在时生效）"
 
+	echo ""
+	echo "================================================"
+	echo "作者：fenglh"
+	echo "Email：335418265@qq.com"
+	echo "GitHub：https://github.com/fenglh/IPABuildShell"
+	echo "================================================"
 
 
 	exit 0
@@ -131,24 +138,22 @@ function initBuildXcconfig() {
 	echo $xcconfigFile
 }
 
-function initUserXcconfig() {
-	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
-		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR )
-		for key in ${allKeys[@]}; do
-			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
+# function initUserXcconfig() {
+# 	if [[ -f "$Shell_User_Xcconfig_File" ]]; then
+# 		local allKeys=(CONFIGRATION_TYPE ARCHS CHANNEL ENABLE_BITCODE DEBUG_INFORMATION_FORMAT AUTO_BUILD_VERSION UNLOCK_KEYCHAIN_PWD API_ENV_FILE_NAME API_ENV_VARNAME API_ENV_PRODUCTION PROVISION_DIR )
+# 		for key in ${allKeys[@]}; do
+# 			local value=$(getXcconfigValue "$Shell_User_Xcconfig_File" "$key")
 
-			# echo "===$value====="
-			if [[ "$value" ]]; then
-				eval "$key"='$value'
-				logit "【初始化用户配置】${key} = `eval echo "$value"`"
-			fi
+# 			# echo "===$value====="
+# 			if [[ "$value" ]]; then
+# 				eval "$key"='$value'
+# 				logit "【初始化用户配置】${key} = `eval echo "$value"`"
+# 			fi
 
-		done
-	fi
+# 		done
+# 	fi
+# }
 
-
-
-}
 
 function checkOpenssl() {
 	local opensslInfo=$(openssl version)
@@ -160,17 +165,17 @@ function checkOpenssl() {
 	logit "【构建信息】OpenSSL 版本:$opensslVersion"
 }
 
-function getXcconfigValue() {
-	local xcconfigFile=$1
-	local key=$2
-	if [[ ! -f "$xcconfigFile" ]]; then
-		exit 1
-	fi
-	## 去掉//开头 ;  查找key=特征，去掉双引号
-	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | tail -1| cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*" | sed 's/\"//g' | sed "s/\'//g" ) 
+# function getXcconfigValue() {
+# 	local xcconfigFile=$1
+# 	local key=$2
+# 	if [[ ! -f "$xcconfigFile" ]]; then
+# 		exit 1
+# 	fi
+# 	## 去掉//开头 ;  查找key=特征，去掉双引号
+# 	local value=$(grep -v "[ ]*//" "$xcconfigFile" | grep -e "[ ]*$key[ ]*=" | tail -1| cut -d "=" -f2 | grep -o "[^ ]\+\( \+[^ ]\+\)*" | sed 's/\"//g' | sed "s/\'//g" ) 
 
-	echo $value
-}
+# 	echo $value
+# }
 
 ## 解锁keychain
 function unlockKeychain(){
@@ -191,7 +196,7 @@ function setXCconfigWithKeyValue() {
 	local key=$1
 	local value=$2
 
-	local xcconfigFile=$Tmp_Build_Xcconfig_File
+	local xcconfigFile=$3
 	if [[ ! -f "$xcconfigFile" ]]; then
 		exit 1
 	fi
@@ -1296,6 +1301,10 @@ while [ "$1" != "" ]; do
       	--auto-buildversion )
             AUTO_BUILD_VERSION='YES'
             ;;
+        --xcconfig )
+			shift 
+			USER_XCCONFIG_FILE="$1"
+			;;
 
       	--env-filename )
 			shift
@@ -1330,7 +1339,7 @@ startTimeSeconds=`date +%s`
 
 historyBackup
 ## 初始化用户配置
-initUserXcconfig
+# initUserXcconfig
 if [[ $? -eq 0 ]]; then
 	logit "【数据备份】上一次打包文件已备份到：$Package_Dir/History"	
 fi
@@ -1547,24 +1556,32 @@ fi
 
 
 
+
+
 ### 进行构建配置信息覆盖，关闭BitCode、签名手动、配置签名等
 xcconfigFile=$(initBuildXcconfig)
-if [[ "$xcconfigFile" ]]; then
-	logit "【签名设置】初始化XCconfig配置文件：$xcconfigFile"
+
+
+
+setXCconfigWithKeyValue "ENABLE_BITCODE" "$ENABLE_BITCODE" "$xcconfigFile"
+setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "$DEBUG_INFORMATION_FORMAT" "$xcconfigFile"
+setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE" "$xcconfigFile"
+setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$(getProvisionfileName "$provisionFile")"  "$xcconfigFile"
+setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$(getProvisionfileUUID "$provisionFile")" "$xcconfigFile"
+setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provisionFile")" "$xcconfigFile"
+setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity" "$xcconfigFile"
+setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId" "$xcconfigFile"
+setXCconfigWithKeyValue "ARCHS" "$ARCHS" "$xcconfigFile"
+setXCconfigWithKeyValue "SUPPORTS_MACCATALYST" "NO" "$xcconfigFile"
+
+
+
+### 合并用户的xcconfig 文件
+if [[ -f "$USER_XCCONFIG_FILE" ]]; then
+	cat "$USER_XCCONFIG_FILE" >> $xcconfigFile ##追加
 fi
-setXCconfigWithKeyValue "ENABLE_BITCODE" "$ENABLE_BITCODE"
-setXCconfigWithKeyValue "DEBUG_INFORMATION_FORMAT" "$DEBUG_INFORMATION_FORMAT"
-setXCconfigWithKeyValue "CODE_SIGN_STYLE" "$CODE_SIGN_STYLE"
-setXCconfigWithKeyValue "PROVISIONING_PROFILE_SPECIFIER" "$(getProvisionfileName "$provisionFile")" 
-setXCconfigWithKeyValue "PROVISIONING_PROFILE" "$(getProvisionfileUUID "$provisionFile")"
-setXCconfigWithKeyValue "DEVELOPMENT_TEAM" "$(getProvisionfileTeamID "$provisionFile")"
-setXCconfigWithKeyValue "CODE_SIGN_IDENTITY" "$codeSignIdentity"
-setXCconfigWithKeyValue "PRODUCT_BUNDLE_IDENTIFIER" "$projectBundleId"
-setXCconfigWithKeyValue "ARCHS" "$ARCHS"
-setXCconfigWithKeyValue "SUPPORTS_MACCATALYST" "NO"
 
-
-
+logit "【签名设置】初始化xcconfig文件：$xcconfigFile"
 
 
 
@@ -1627,7 +1644,7 @@ checkIPA "$exportPath"
 ##清理临时文件
 rm -rf "$Tmp_Options_Plist_File" ##清理option.plist
 rm -rf "$Tmp_Build_Xcconfig_File" ##清理xcconfig
-# rm -rf "$archivePath"	##清理xcarchive
+rm -rf "$archivePath"	##清理xcarchive
 rm -rf "$Package_Dir/Packaging.log" #清理日志
 rm -rf "$Package_Dir/ExportOptions.plist"
 rm -rf "$Package_Dir/DistributionSummary.plist"
@@ -1643,8 +1660,7 @@ exportDir=${exportPath%/*}
 ipaName=$(finalIPAName "$targetName" "$apiEnvFile" "$API_ENV_VARNAME" "$infoPlistFile" "$(getProfileTypeCNName $CHANNEL)" "$configurationId" "$xcodeprojPath" )
 
 
-mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
-mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
+
 if [[ -f "$Package_Dir/dsym.tar.gz" ]]; then
 	mv "$Package_Dir/dsym.tar.gz"  "${exportDir}/${ipaName}.dysm.tar.gz"
 	logit "【IPA 信息】DYSM路径:${exportDir}/${ipaName}.dysm.tar.gz"
@@ -1658,6 +1674,7 @@ logit "【IPA 信息】日志路径:${exportDir}/${ipaName}.txt"
 endTimeSeconds=`date +%s`
 logit "【构建时长】构建时长：$((${endTimeSeconds}-${startTimeSeconds})) 秒"
 
-
+mv "$exportPath" 	"${exportDir}/${ipaName}.ipa"
+mv "$Tmp_Log_File" 	"${exportDir}/${ipaName}.txt"
 
 
