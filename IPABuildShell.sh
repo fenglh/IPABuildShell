@@ -52,6 +52,7 @@ function usage
 	echo "  -t | --target <targetName> 指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target"
 	echo "  -v | --verbose 输出详细的构建信息"
 	echo "  -h | --help 帮助."
+	echo "  -s | --show-sign 显示签名配置"
 	echo "  -x 脚本执行调试模式."
 
 	
@@ -1269,6 +1270,9 @@ while [ "$1" != "" ]; do
             shift
             UNLOCK_KEYCHAIN_PWD="$1"
             ;;
+        -s | --show-sign )
+			ONLYSHOWSIGN=true
+			;;
         -v | --verbose )
 			VERBOSE=true
 			;;
@@ -1554,7 +1558,9 @@ if [[ ! "$result" ]]; then
 	errorExit "签名ID:${codeSignIdentity}无效，请检查钥匙串是否导入对应的证书或脚本访问keychain权限不足，请使用-p参数指定密码 "
 fi
 
-
+if [[ $ONLYSHOWSIGN ]]; then
+	exit;
+fi
 
 
 
