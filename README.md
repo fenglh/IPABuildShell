@@ -20,6 +20,7 @@ Usage:IPABuildShell.sh -[abcdptx] [--enable-bitcode YES/NO] [--auto-buildversion
 -d | --provision-dir dir 指定授权文件目录，默认会在~/Library/MobileDevice/Provisioning Profiles 中寻找
 -p | --keychain-password passoword 指定访问证书时解锁钥匙串的密码，即开机密码
 -t | --target targetName 指定构建的target。默认当项目是单工程(非workspace)或者除Pods.xcodeproj之外只有一个工程的情况下，自动构建工程的第一个Target
+-s | --show-sign 显示签名配置
 -v | --verbose 输出详细的构建信息
 -h | --help 帮助.
 -x 脚本执行调试模式.
@@ -208,6 +209,14 @@ source ~/.bash_profile
 ### 版本更新日志
 
 ```
+# 2020/05/22
+# 版本：3.0.7
+# 1. 增加-s参数：-s | --show-sign 显示签名配置
+#--------------------------------------------
+# 2020/05/22
+# 版本：3.0.6
+# 1. 增加dsym文件备份
+#--------------------------------------------
 # 2020/05/22
 # 版本：3.0.5
 # 1. 支持通配符bundleid描述文件匹配
