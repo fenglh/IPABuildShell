@@ -6,7 +6,7 @@
 # version:      3.0.4(225)
 # createTime:   2018-07-30
 # description:  iOS 自动打包
-# author:       冯立海
+# author:       itx
 # email:        335418265@qq.com
 # github:       https://github.com/aa335418265/IPABuildShell
 # ----------------------------------------------------------------------
